@@ -26,18 +26,11 @@ dependencies = [
     "django-health-check>=3.17",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "django-debug-toolbar>=4.0",
-    "ipython>=8.0",
-]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [tool.uv]
 dev-dependencies = [
     "django-debug-toolbar>=4.0",
     "ipython>=8.0",
 ]
+
+# Don't try to build this as a Python package
+package = false

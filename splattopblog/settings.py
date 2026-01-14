@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     "wagtail",
     # Wagtail extensions
     "wagtailmarkdown",
+    "taggit",
+    "modelcluster",
     # Django apps
     "django.contrib.admin",
     "django.contrib.auth",

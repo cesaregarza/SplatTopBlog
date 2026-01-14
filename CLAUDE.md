@@ -88,3 +88,208 @@ When reviewing PRs, check for:
 - [ ] Accessibility considerations (contrast, motion)
 - [ ] No security vulnerabilities (XSS, SQL injection)
 - [ ] Migrations are included if models changed
+
+---
+
+# Deployment Infrastructure (SplatTopConfig)
+
+This project deploys to Kubernetes via the `SplatTopConfig` GitOps repository at `~/dev/SplatTopConfig`.
+
+## SplatTopConfig Structure
+
+```
+SplatTopConfig/
+├── helm/
+│   ├── splattop/          # Main SplatTop app (FastAPI + React)
+│   ├── splatvote/         # Voting system
+│   ├── splattopblog/      # This blog (to be created)
+│   └── vanity-hosts/      # URL redirects
+├── argocd/
+│   └── applications/      # ArgoCD Application manifests
+│       ├── splattop-prod.yaml
+│       ├── splatvote-prod.yaml
+│       └── splattopblog-prod.yaml  # (to be created)
+```
+
+## Helm Chart Pattern
+
+Each service follows this structure:
+
+```
+helm/<service>/
+├── Chart.yaml              # Chart metadata
+├── values.yaml             # Development defaults (minimal, often disabled ingress)
+├── values-prod.yaml        # Production overrides (enabled, TLS, resources)
+└── templates/
+    ├── _helpers.tpl        # Template helpers (fullname, labels, etc.)
+    ├── deployment.yaml     # Kubernetes Deployment
+    ├── service.yaml        # Kubernetes Service (ClusterIP)
+    ├── ingress.yaml        # Ingress with nginx + cert-manager
+    ├── certificate.yaml    # Let's Encrypt TLS certificate
+    └── pvc.yaml            # PersistentVolumeClaim (if needed)
+```
+
+## values.yaml vs values-prod.yaml
+
+**values.yaml** (development defaults):
+```yaml
+global:
+  environment: development
+
+myapp:
+  enabled: true
+  replicas: 1
+  image:
+    repository: registry.digitalocean.com/sendouq/myapp
+    tag: latest
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+ingress:
+  enabled: false  # Disabled in dev
+```
+
+**values-prod.yaml** (production overrides):
+```yaml
+global:
+  environment: production
+
+myapp:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+  - host: myapp.splat.top
+    paths:
+    - path: /
+      pathType: Prefix
+      servicePort: 8000
+  tls:
+    enabled: true
+    secretName: myapp-tls-secret
+    certificate:
+      enabled: true
+      dnsNames:
+      - myapp.splat.top
+```
+
+## ArgoCD Application Pattern
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: splattop
+  source:
+    repoURL: https://github.com/cesaregarza/SplatTopConfig.git
+    targetRevision: main
+    path: helm/myapp
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: myapp-prod
+  syncPolicy:
+    automated: null  # Manual sync
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+```
+
+## Ingress & TLS
+
+All services use nginx ingress with:
+- TLS via cert-manager (`letsencrypt-prod` ClusterIssuer)
+- Subdomains under `*.splat.top`
+- SSL redirect enabled
+
+Current routing:
+| Domain | Service |
+|--------|---------|
+| `splat.top` / `comp.splat.top` | SplatTop (FastAPI + React) |
+| `vote.splat.top` | SplatVote |
+| `blog.splat.top` | SplatTopBlog (this project) |
+| `grafana.splat.top` | Monitoring |
+
+## Database Secrets
+
+Services connect to managed PostgreSQL via Kubernetes secrets:
+```yaml
+env:
+  - name: SQL_HOST
+    valueFrom:
+      secretKeyRef:
+        name: splattopblog-db-secrets
+        key: DB_HOST
+```
+
+Create before deploying:
+```bash
+kubectl create secret generic splattopblog-db-secrets \
+  --namespace splattopblog-prod \
+  --from-literal=DB_HOST=<host> \
+  --from-literal=DB_USER=<user> \
+  --from-literal=DB_PASSWORD=<password> \
+  --from-literal=DB_NAME=splattopblog
+```
+
+## CI/CD Flow
+
+1. Push to `main` → GitHub Actions builds Docker image → DO Container Registry
+2. Action creates PR to SplatTopConfig updating image tag
+3. Merge PR → ArgoCD detects change → syncs to Kubernetes
+
+## Template Helpers (_helpers.tpl)
+
+Standard helpers every chart should include:
+```yaml
+{{- define "myapp.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "myapp.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- define "myapp.labels" -}}
+helm.sh/chart: {{ include "myapp.chart" . }}
+{{ include "myapp.selectorLabels" . }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{- define "myapp.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "myapp.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+```
