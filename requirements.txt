@@ -1,0 +1,27 @@
+# Wagtail CMS
+wagtail>=6.0,<7.0
+
+# Django
+Django>=5.0,<6.0
+
+# PostgreSQL
+psycopg[binary]>=3.1
+
+# Production server
+gunicorn>=21.0
+uvicorn[standard]>=0.27
+
+# Static files
+whitenoise>=6.6
+
+# Image processing
+Pillow>=10.0
+
+# Markdown support
+wagtail-markdown>=0.11
+
+# Environment variables
+python-dotenv>=1.0
+
+# Health checks
+django-health-check>=3.17

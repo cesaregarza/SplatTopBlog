@@ -1,0 +1,122 @@
+{% load static wagtailcore_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}{% endblock %} | SplatTop Blog</title>
+    <meta name="description" content="{% block description %}{{ page.search_description }}{% endblock %}">
+
+    {% block extra_css %}{% endblock %}
+
+    <style>
+        /* Base styles - replace with your style bible */
+        :root {
+            --color-primary: #6366f1;
+            --color-bg: #0f0f0f;
+            --color-surface: #1a1a1a;
+            --color-text: #e5e5e5;
+            --color-text-muted: #a3a3a3;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            border-bottom: 1px solid var(--color-surface);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header a {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        article {
+            margin-bottom: 3rem;
+        }
+
+        h1, h2, h3, h4 {
+            margin-bottom: 1rem;
+        }
+
+        a {
+            color: var(--color-primary);
+        }
+
+        .post-meta {
+            color: var(--color-text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .post-intro {
+            color: var(--color-text-muted);
+            margin-bottom: 1rem;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+        }
+
+        pre, code {
+            background: var(--color-surface);
+            border-radius: 0.25rem;
+        }
+
+        pre {
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        code {
+            padding: 0.125rem 0.25rem;
+        }
+
+        blockquote {
+            border-left: 3px solid var(--color-primary);
+            padding-left: 1rem;
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">SplatTop Blog</a>
+        </header>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer>
+            {% block footer %}{% endblock %}
+        </footer>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags wagtailimages_tags wagtailmarkdown %}
+
+{% block content %}
+<article>
+    <header>
+        <h1>{{ page.title }}</h1>
+        <p class="post-meta">{{ page.date }}</p>
+    </header>
+
+    {% if page.featured_image %}
+        {% image page.featured_image width-800 as img %}
+        <img src="{{ img.url }}" alt="{{ page.title }}" class="featured-image">
+    {% endif %}
+
+    <div class="content">
+        {% for block in page.body %}
+            {% if block.block_type == 'markdown' %}
+                <div class="markdown-content">
+                    {{ block.value|markdown }}
+                </div>
+            {% elif block.block_type == 'paragraph' %}
+                <div class="rich-text">
+                    {{ block.value }}
+                </div>
+            {% elif block.block_type == 'heading' %}
+                <h2>{{ block.value }}</h2>
+            {% elif block.block_type == 'image' %}
+                {% image block.value width-800 as img %}
+                <figure>
+                    <img src="{{ img.url }}" alt="">
+                </figure>
+            {% elif block.block_type == 'code' %}
+                <pre><code class="language-{{ block.value.language }}">{{ block.value.code }}</code></pre>
+            {% elif block.block_type == 'raw_html' %}
+                {{ block.value }}
+            {% elif block.block_type == 'quote' %}
+                <blockquote>{{ block.value }}</blockquote>
+            {% endif %}
+        {% endfor %}
+    </div>
+</article>
+
+<nav class="post-nav">
+    <a href="{{ page.get_parent.url }}">&larr; Back to posts</a>
+</nav>
+{% endblock %}

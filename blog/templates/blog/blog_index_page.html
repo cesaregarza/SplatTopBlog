@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block content %}
+<h1>{{ page.title }}</h1>
+
+{% if page.intro %}
+    <p class="intro">{{ page.intro }}</p>
+{% endif %}
+
+<div class="posts">
+    {% for post in posts %}
+        <article class="post-card">
+            {% if post.featured_image %}
+                <a href="{% pageurl post %}">
+                    {% image post.featured_image fill-800x400 as img %}
+                    <img src="{{ img.url }}" alt="{{ post.title }}">
+                </a>
+            {% endif %}
+            <h2><a href="{% pageurl post %}">{{ post.title }}</a></h2>
+            <p class="post-meta">{{ post.date }}</p>
+            {% if post.intro %}
+                <p class="post-intro">{{ post.intro }}</p>
+            {% endif %}
+        </article>
+    {% empty %}
+        <p>No posts yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}
