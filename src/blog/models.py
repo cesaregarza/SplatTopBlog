@@ -1,3 +1,4 @@
+from django.core.paginator import Paginator
 from django.db import models
 
 from wagtail import blocks
@@ -34,12 +35,19 @@ class BlogIndexPage(Page):
 
     def get_context(self, request):
         context = super().get_context(request)
-        context["posts"] = (
+        posts = (
             self.get_children()
             .live()
             .specific()
             .order_by("-first_published_at")
         )
+        paginator = Paginator(posts, 9)
+        page_number = request.GET.get("page")
+        page_obj = paginator.get_page(page_number)
+        context["posts"] = page_obj
+        context["page_obj"] = page_obj
+        context["paginator"] = paginator
+        context["is_paginated"] = paginator.num_pages > 1
         return context
 
     class Meta:
