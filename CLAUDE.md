@@ -17,22 +17,30 @@ SplatTop Blog is a Wagtail CMS-based blog that serves as the companion blog for 
 
 ```
 SplatTopBlog/
-├── blog/                 # Blog app (posts, index)
-│   ├── models.py         # BlogPage, BlogIndexPage models
-│   └── templates/blog/   # Blog templates
-├── home/                 # Home app
-│   ├── models.py         # HomePage model
-│   └── templates/home/   # Home templates
-├── splattopblog/         # Project settings
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-├── templates/            # Base templates
-│   └── base.html         # Main template with SplatTop styles
-├── static/               # Static files
-├── media/                # User uploads
-└── docs/                 # Documentation
-    └── SplatTop_style_bible.md  # Design system reference
+├── src/                      # Application code
+│   ├── blog/                 # Blog app (posts, index)
+│   │   ├── models.py         # BlogPage, BlogIndexPage models
+│   │   └── templates/blog/   # Blog templates
+│   ├── home/                 # Home app
+│   │   ├── models.py         # HomePage model
+│   │   └── templates/home/   # Home templates
+│   ├── splattopblog/         # Project settings
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── templates/            # Base templates
+│   │   └── base.html         # Main template with SplatTop styles
+│   ├── static/               # Static files
+│   ├── media/                # User uploads
+│   └── manage.py
+├── docs/                     # Documentation
+│   └── SplatTop_style_bible.md
+├── .github/workflows/        # CI/CD
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+├── uv.lock
+└── Makefile
 ```
 
 ## Code Style
@@ -63,19 +71,24 @@ SplatTopBlog/
 ## Common Tasks
 
 ### Adding a new block type
-1. Define in `blog/models.py` in the `body` StreamField
-2. Add template handling in `blog_page.html`
-3. Style in `base.html` following style bible
+1. Define in `src/blog/models.py` in the `body` StreamField
+2. Add template handling in `src/blog/templates/blog/blog_page.html`
+3. Style in `src/templates/base.html` following style bible
 
 ### Running locally
 ```bash
+# Using Make (recommended)
+make setup      # First-time setup
+make dev        # Run development server
+
+# Using Docker (with PostgreSQL)
 docker-compose up
 ```
 
 ### Migrations
 ```bash
-python manage.py makemigrations
-python manage.py migrate
+make makemigrations
+make migrate
 ```
 
 ## Review Checklist

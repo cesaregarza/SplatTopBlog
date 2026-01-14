@@ -17,13 +17,14 @@ services:
 
   web:
     build: .
+    working_dir: /app/src
     command: >
       sh -c "uv run python manage.py migrate &&
              uv run python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - .:/app
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      - ./src:/app/src
+      - static_volume:/app/src/staticfiles
+      - media_volume:/app/src/media
     ports:
       - "8000:8000"
     environment:

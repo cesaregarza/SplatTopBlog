@@ -40,7 +40,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 FROM dependencies AS build
 
 # Copy project files
-COPY . .
+COPY src/ ./src/
+
+WORKDIR /app/src
 
 # Collect static files
 RUN uv run python manage.py collectstatic --noinput --clear

@@ -1,5 +1,7 @@
 .PHONY: help install dev migrate shell superuser static clean docker-up docker-down
 
+SRC_DIR := src
+
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
@@ -7,22 +9,22 @@ install:  ## Install dependencies
 	uv sync
 
 dev:  ## Run development server
-	uv run python manage.py runserver
+	cd $(SRC_DIR) && uv run python manage.py runserver
 
 migrate:  ## Run database migrations
-	uv run python manage.py migrate
+	cd $(SRC_DIR) && uv run python manage.py migrate
 
 makemigrations:  ## Create new migrations
-	uv run python manage.py makemigrations
+	cd $(SRC_DIR) && uv run python manage.py makemigrations
 
 shell:  ## Open Django shell
-	uv run python manage.py shell
+	cd $(SRC_DIR) && uv run python manage.py shell
 
 superuser:  ## Create superuser
-	uv run python manage.py createsuperuser
+	cd $(SRC_DIR) && uv run python manage.py createsuperuser
 
 static:  ## Collect static files
-	uv run python manage.py collectstatic --noinput
+	cd $(SRC_DIR) && uv run python manage.py collectstatic --noinput
 
 clean:  ## Clean up cache files
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
@@ -45,7 +47,7 @@ docker-build:  ## Rebuild Docker image
 # Initial setup
 setup: install  ## Initial project setup
 	@if [ ! -f .env ]; then cp .env.local .env; echo "Created .env from .env.local"; fi
-	uv run python manage.py migrate
+	cd $(SRC_DIR) && uv run python manage.py migrate
 	@echo ""
 	@echo "Setup complete! Run 'make dev' to start the server."
 	@echo "Visit http://localhost:8000/admin/ to access the admin."

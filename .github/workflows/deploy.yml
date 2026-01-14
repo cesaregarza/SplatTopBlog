@@ -12,15 +12,10 @@ on:
     branches:
       - main
     paths:
-      - "blog/**"
-      - "home/**"
-      - "splattopblog/**"
-      - "templates/**"
-      - "static/**"
+      - "src/**"
       - "pyproject.toml"
       - "uv.lock"
       - "Dockerfile"
-      - "manage.py"
 
 permissions:
   contents: read

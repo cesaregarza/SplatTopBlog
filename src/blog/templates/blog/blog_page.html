@@ -21,7 +21,7 @@
                 </div>
             {% elif block.block_type == 'paragraph' %}
                 <div class="rich-text">
-                    {{ block.value }}
+                    {{ block.value|richtext }}
                 </div>
             {% elif block.block_type == 'heading' %}
                 <h2>{{ block.value }}</h2>

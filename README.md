@@ -46,9 +46,31 @@ make docker-logs   # View logs
 make docker-down   # Stop containers
 ```
 
+## Project Structure
+
+```
+SplatTopBlog/
+├── src/                      # Application code
+│   ├── blog/                 # Blog app (posts, index)
+│   ├── home/                 # Home page app
+│   ├── splattopblog/         # Django settings
+│   ├── templates/            # Base templates
+│   ├── static/               # Static assets
+│   ├── media/                # User uploads
+│   └── manage.py
+├── docs/                     # Documentation
+│   └── SplatTop_style_bible.md
+├── .github/workflows/        # CI/CD
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+├── uv.lock
+└── Makefile
+```
+
 ## Environment Variables
 
-The project uses `.env` for configuration. Copy `.env.local` to get started:
+Copy `.env.local` to `.env`:
 
 ```bash
 cp .env.local .env
@@ -60,35 +82,8 @@ cp .env.local .env
 | `DJANGO_SECRET_KEY` | Django secret key | (required in prod) |
 | `ALLOWED_HOSTS` | Comma-separated hosts | `localhost,127.0.0.1` |
 | `SQL_HOST` | PostgreSQL host | (empty = SQLite) |
-| `SQL_PORT` | PostgreSQL port | `5432` |
-| `SQL_DATABASE` | Database name | `splattopblog` |
-| `SQL_USER` | Database user | `postgres` |
-| `SQL_PASSWORD` | Database password | |
 
-**Note:** When `SQL_HOST` is not set, the app uses SQLite (`db.sqlite3`), which is perfect for local development.
-
-## Blog Features
-
-- **Markdown blocks** with syntax highlighting
-- **Rich text** editing
-- **Raw HTML** for embeds
-- **Image** uploads with Wagtail image processing
-- **Code blocks** with language support
-- **Quote blocks**
-
-## Project Structure
-
-```
-splattopblog/
-├── blog/                 # Blog app (posts, index)
-├── home/                 # Home page app
-├── splattopblog/         # Project settings
-├── templates/            # Base templates
-├── static/               # Static assets
-├── media/                # User uploads
-└── docs/                 # Documentation
-    └── SplatTop_style_bible.md
-```
+**Note:** When `SQL_HOST` is not set, the app uses SQLite, which is perfect for local development.
 
 ## Production Deployment
 
