@@ -17,6 +17,10 @@ venv/
 .venv/
 ENV/
 env/
+.python-version
+
+# uv
+.uv/
 
 # IDE
 .idea/

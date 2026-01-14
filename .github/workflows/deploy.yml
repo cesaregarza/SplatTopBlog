@@ -1,0 +1,167 @@
+name: Build and Deploy Blog
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: "Force deployment even without code changes"
+        type: boolean
+        required: false
+        default: false
+  push:
+    branches:
+      - main
+    paths:
+      - "blog/**"
+      - "home/**"
+      - "splattopblog/**"
+      - "templates/**"
+      - "static/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Dockerfile"
+      - "manage.py"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: registry.digitalocean.com
+  IMAGE_NAME: sendouq/splattop-blog
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: SplatTop
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+      image_digest: ${{ steps.build.outputs.digest }}
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set variables
+        id: vars
+        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to DigitalOcean Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          password: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+
+  update-config:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: SplatTop
+    steps:
+      - name: Checkout config repository
+        uses: actions/checkout@v4
+        with:
+          repository: cesaregarza/SplatTopConfig
+          token: ${{ secrets.CONFIG_REPO_TOKEN }}
+          path: config-repo
+          ref: main
+
+      - name: Install dependencies
+        run: python3 -m pip install --user "ruamel.yaml>=0.18.6,<0.19"
+
+      - name: Update Helm values
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.short_sha }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
+        run: |
+          cd config-repo
+
+          # Update values-prod.yaml with new image tag
+          python3 << 'EOF'
+          import os
+          from ruamel.yaml import YAML
+
+          yaml = YAML()
+          yaml.preserve_quotes = True
+
+          values_file = "helm/splattop-blog/values-prod.yaml"
+          tag = os.environ["IMAGE_TAG"]
+
+          with open(values_file, "r") as f:
+              values = yaml.load(f)
+
+          # Update the image tag
+          if "blog" not in values:
+              values["blog"] = {}
+          if "image" not in values["blog"]:
+              values["blog"]["image"] = {}
+          values["blog"]["image"]["tag"] = tag
+
+          # Also update global tag
+          if "global" not in values:
+              values["global"] = {}
+          values["global"]["appImageTag"] = tag
+
+          with open(values_file, "w") as f:
+              yaml.dump(values, f)
+
+          print(f"Updated {values_file} with tag: {tag}")
+          EOF
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.CONFIG_REPO_TOKEN }}
+          IMAGE_TAG: ${{ needs.build.outputs.short_sha }}
+        run: |
+          cd config-repo
+
+          BRANCH="bot/blog-update-${GITHUB_RUN_ID}"
+
+          git config user.name "splattop-bot"
+          git config user.email "sre+bot@splattop.dev"
+          git checkout -b "$BRANCH"
+          git add helm/splattop-blog/values-prod.yaml
+          git commit -m "chore(blog): update image tag to ${IMAGE_TAG}"
+          git push --set-upstream origin "$BRANCH"
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "[bot] Update splattop-blog image to ${IMAGE_TAG}" \
+            --body "Automated update from SplatTopBlog repository.
+
+          **Source commit:** ${{ github.repository }}@${{ github.sha }}
+          **Image tag:** ${IMAGE_TAG}
+
+          This PR was created automatically by the CI/CD pipeline." \
+            || echo "Pull request already exists; continuing."
