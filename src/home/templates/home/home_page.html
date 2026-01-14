@@ -2,9 +2,21 @@
 {% load wagtailcore_tags %}
 
 {% block content %}
-<h1>{{ page.title }}</h1>
+<section class="page-hero">
+    <h1 class="page-title">{{ page.title }}</h1>
+    {% if page.search_description %}
+        <p class="page-intro">{{ page.search_description }}</p>
+    {% endif %}
+</section>
 
-{% for child in page.get_children.live %}
-    <p><a href="{% pageurl child %}">{{ child.title }}</a></p>
-{% endfor %}
+<section class="link-grid">
+    {% for child in page.get_children.live %}
+        <a class="link-card" href="{% pageurl child %}">
+            <div class="link-card__title">{{ child.title }}</div>
+            <div class="link-card__meta">Explore page</div>
+        </a>
+    {% empty %}
+        <p class="page-intro">No pages yet.</p>
+    {% endfor %}
+</section>
 {% endblock %}
