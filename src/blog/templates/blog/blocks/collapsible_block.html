@@ -1,0 +1,12 @@
+{% load wagtailcore_tags wagtailimages_tags wagtailmarkdown %}
+<details class="collapsible-block"{% if value.open_by_default %} open{% endif %}>
+    <summary class="collapsible-block__summary">
+        <span class="collapsible-block__title">{{ value.title }}</span>
+        <span class="collapsible-block__icon" aria-hidden="true"></span>
+    </summary>
+    <div class="collapsible-block__content">
+        {% for block in value.content %}
+            {% include "blog/blocks/render_block.html" with block=block %}
+        {% endfor %}
+    </div>
+</details>

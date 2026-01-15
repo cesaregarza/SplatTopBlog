@@ -600,6 +600,105 @@ pre code {
     transform: scale(0.98);
 }
 
+/* Collapsible Blocks */
+.collapsible-block {
+    margin: 1.5rem 0;
+    border-radius: 12px;
+    border: 1px solid rgba(217, 70, 239, 0.2);
+    background: rgba(15, 23, 42, 0.6);
+    overflow: hidden;
+}
+
+.collapsible-block__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    background: rgba(217, 70, 239, 0.08);
+    border-bottom: 1px solid transparent;
+    transition: background 200ms ease, border-color 200ms ease;
+    list-style: none;
+}
+
+.collapsible-block__summary::-webkit-details-marker {
+    display: none;
+}
+
+.collapsible-block__summary::marker {
+    display: none;
+    content: "";
+}
+
+.collapsible-block__summary:hover {
+    background: rgba(217, 70, 239, 0.14);
+}
+
+.collapsible-block[open] .collapsible-block__summary {
+    border-bottom-color: rgba(217, 70, 239, 0.2);
+}
+
+.collapsible-block__title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.collapsible-block__icon {
+    width: 20px;
+    height: 20px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.collapsible-block__icon::before,
+.collapsible-block__icon::after {
+    content: "";
+    position: absolute;
+    background: var(--color-purple-light);
+    border-radius: 2px;
+    transition: transform 200ms ease;
+}
+
+.collapsible-block__icon::before {
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    transform: translateY(-50%);
+}
+
+.collapsible-block__icon::after {
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 100%;
+    transform: translateX(-50%);
+}
+
+.collapsible-block[open] .collapsible-block__icon::after {
+    transform: translateX(-50%) rotate(90deg);
+    opacity: 0;
+}
+
+.collapsible-block__content {
+    padding: 1.25rem;
+}
+
+.collapsible-block__content > :first-child {
+    margin-top: 0;
+}
+
+.collapsible-block__content > :last-child {
+    margin-bottom: 0;
+}
+
+/* Nested collapsible blocks */
+.collapsible-block .collapsible-block {
+    margin: 1rem 0;
+    background: rgba(15, 23, 42, 0.4);
+}
+
 /* Animations */
 @keyframes fade-up {
     from {
