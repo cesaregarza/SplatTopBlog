@@ -30,6 +30,8 @@ make install       # Install dependencies
 make dev           # Run dev server
 make migrate       # Run migrations
 make makemigrations # Create migrations
+make lint          # Run linting (ruff)
+make format        # Format code (ruff)
 make shell         # Django shell
 make superuser     # Create admin user
 make static        # Collect static files

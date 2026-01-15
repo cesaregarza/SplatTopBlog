@@ -1,4 +1,4 @@
-.PHONY: help install dev migrate shell superuser static clean docker-up docker-down
+.PHONY: help install dev migrate shell superuser static clean lint format docker-up docker-down
 
 SRC_DIR := src
 
@@ -7,6 +7,12 @@ help:  ## Show this help
 
 install:  ## Install dependencies
 	uv sync
+
+lint:  ## Run linting (ruff)
+	cd $(SRC_DIR) && uv run ruff check .
+
+format:  ## Format code (ruff)
+	cd $(SRC_DIR) && uv run ruff format .
 
 dev:  ## Run development server
 	cd $(SRC_DIR) && uv run python manage.py runserver

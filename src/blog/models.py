@@ -1,6 +1,5 @@
 from django.core.paginator import Paginator
 from django.db import models
-
 from wagtail import blocks
 from wagtail.admin.panels import FieldPanel
 from wagtail.fields import StreamField
@@ -35,12 +34,7 @@ class BlogIndexPage(Page):
 
     def get_context(self, request):
         context = super().get_context(request)
-        posts = (
-            self.get_children()
-            .live()
-            .specific()
-            .order_by("-first_published_at")
-        )
+        posts = self.get_children().live().specific().order_by("-first_published_at")
         paginator = Paginator(posts, 9)
         page_number = request.GET.get("page")
         page_obj = paginator.get_page(page_number)
