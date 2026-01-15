@@ -11,7 +11,8 @@ install:  ## Install dependencies
 lint:  ## Run linting (ruff)
 	cd $(SRC_DIR) && uv run ruff check .
 
-format:  ## Format code (ruff)
+format:  ## Format code (ruff + import fixes)
+	cd $(SRC_DIR) && uv run ruff check . --fix
 	cd $(SRC_DIR) && uv run ruff format .
 
 dev:  ## Run development server
