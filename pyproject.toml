@@ -24,6 +24,8 @@ dependencies = [
     "python-dotenv>=1.0",
     # Health checks
     "django-health-check>=3.17",
+    # Object storage (S3/DO Spaces)
+    "django-storages[s3]>=1.14",
 ]
 
 [tool.uv]
