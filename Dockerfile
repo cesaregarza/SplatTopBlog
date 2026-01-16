@@ -39,6 +39,14 @@ RUN uv sync --frozen --no-dev --no-install-project
 ###############################
 FROM dependencies AS build
 
+# Build arguments for versioning
+ARG BUILD_VERSION=dev
+ARG GIT_SHA=unknown
+
+# Set version info as environment variables
+ENV APP_VERSION=${BUILD_VERSION} \
+    GIT_SHA=${GIT_SHA}
+
 # Copy project files
 COPY src/ ./src/
 

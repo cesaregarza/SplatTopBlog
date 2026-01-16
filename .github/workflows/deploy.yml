@@ -16,9 +16,10 @@ on:
       - "pyproject.toml"
       - "uv.lock"
       - "Dockerfile"
+      - ".version"
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 concurrency:
@@ -34,16 +35,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: SplatTop
     outputs:
-      image_tag: ${{ steps.meta.outputs.version }}
+      image_tag: v${{ steps.nextver.outputs.version }}
       image_digest: ${{ steps.build.outputs.digest }}
-      short_sha: ${{ steps.vars.outputs.short_sha }}
+      version: ${{ steps.nextver.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set variables
-        id: vars
-        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -55,14 +52,50 @@ jobs:
           username: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
           password: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
-      - name: Generate image metadata
-        id: meta
-        uses: docker/metadata-action@v5
+      - name: Read .version
+        id: semver
+        run: echo "version=$(cat .version)" >> "$GITHUB_OUTPUT"
+
+      - name: Get latest release tag
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "")
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Compute next version
+        id: nextver
+        uses: actions/github-script@v7
+        env:
+          BASE_VERSION: ${{ steps.semver.outputs.version }}
+          LATEST_TAG: ${{ steps.latest.outputs.tag }}
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest,enable={{is_default_branch}}
+          script: |
+            function parse(v) {
+              const cleaned = String(v || '')
+                .trim()
+                .replace(/^v\.?/, '');
+              const parts = cleaned.split('.');
+              const [M = '0', m = '0', p = '0'] = parts;
+              return {
+                M: Number(M) || 0,
+                m: Number(m) || 0,
+                p: Number(p) || 0,
+              };
+            }
+            const base = parse(process.env.BASE_VERSION);
+            const latest = parse(process.env.LATEST_TAG);
+            const baseGreater =
+              base.M > latest.M ||
+              (base.M === latest.M && (
+                base.m > latest.m ||
+                (base.m === latest.m && base.p > latest.p)
+              ));
+            const next = baseGreater
+              ? `${base.M}.${base.m}.${base.p}`
+              : `${latest.M}.${latest.m}.${latest.p + 1}`;
+            core.setOutput('version', next);
 
       - name: Build and push
         id: build
@@ -70,12 +103,38 @@ jobs:
         with:
           context: .
           push: ${{ github.ref == 'refs/heads/main' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.nextver.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
+            BUILD_VERSION=${{ steps.nextver.outputs.version }}
             GIT_SHA=${{ github.sha }}
+
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          # Check if release already exists
+          if gh release view "v${VERSION}" &>/dev/null; then
+            echo "Release v${VERSION} already exists, skipping"
+          else
+            gh release create "v${VERSION}" \
+              --title "v${VERSION}" \
+              --generate-notes
+          fi
 
   update-config:
     needs: build
@@ -96,7 +155,7 @@ jobs:
 
       - name: Update Helm values
         env:
-          IMAGE_TAG: ${{ needs.build.outputs.short_sha }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
           IMAGE_DIGEST: ${{ needs.build.outputs.image_digest }}
         run: |
           cd config-repo
@@ -122,11 +181,6 @@ jobs:
               values["blog"]["image"] = {}
           values["blog"]["image"]["tag"] = tag
 
-          # Also update global tag
-          if "global" not in values:
-              values["global"] = {}
-          values["global"]["appImageTag"] = tag
-
           with open(values_file, "w") as f:
               yaml.dump(values, f)
 
@@ -136,7 +190,7 @@ jobs:
       - name: Create Pull Request
         env:
           GH_TOKEN: ${{ secrets.CONFIG_REPO_TOKEN }}
-          IMAGE_TAG: ${{ needs.build.outputs.short_sha }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
         run: |
           cd config-repo
 
