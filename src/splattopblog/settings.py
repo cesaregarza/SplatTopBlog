@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     # Health checks
     "health_check",
     "health_check.db",
+    # Object storage
+    "storages",
     # Project apps
     "home",
     "blog",
@@ -84,6 +86,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "splattopblog.wsgi.application"
+
 
 # Database
 # Use PostgreSQL in production, SQLite for local development
@@ -166,15 +169,61 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-# Use whitenoise manifest storage only in production
-if DEBUG:
-    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
-else:
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# DigitalOcean Spaces configuration (S3-compatible object storage)
+USE_SPACES = os.environ.get("USE_SPACES", "false").lower() == "true"
+
+if USE_SPACES:
+    # DO Spaces credentials
+    AWS_ACCESS_KEY_ID = os.environ.get("SPACES_ACCESS_KEY")
+    AWS_SECRET_ACCESS_KEY = os.environ.get("SPACES_SECRET_KEY")
+    AWS_STORAGE_BUCKET_NAME = os.environ.get("SPACES_BUCKET_NAME")
+    AWS_S3_REGION_NAME = os.environ.get("SPACES_REGION", "nyc3")
+    AWS_S3_ENDPOINT_URL = os.environ.get(
+        "SPACES_ENDPOINT_URL", f"https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com"
+    )
+
+    # Optional CDN endpoint (e.g., bucket-name.nyc3.cdn.digitaloceanspaces.com)
+    AWS_S3_CUSTOM_DOMAIN = os.environ.get("SPACES_CDN_DOMAIN")
+
+    # Storage settings
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+
+    # Use Spaces for media, WhiteNoise for static
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "location": "media",
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+    # Update media URL to use Spaces
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
+    else:
+        MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/media/"
+else:
+    # Local development: use filesystem storage
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
