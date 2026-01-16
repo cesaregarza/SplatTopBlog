@@ -251,21 +251,19 @@ Current routing:
 Services connect to managed PostgreSQL via Kubernetes secrets:
 ```yaml
 env:
-  - name: SQL_HOST
+  - name: DATABASE_URL
     valueFrom:
       secretKeyRef:
-        name: splattopblog-db-secrets
-        key: DB_HOST
+        name: blog-db-secrets
+        key: DATABASE_URL
 ```
 
 Create before deploying:
 ```bash
-kubectl create secret generic splattopblog-db-secrets \
-  --namespace splattopblog-prod \
-  --from-literal=DB_HOST=<host> \
-  --from-literal=DB_USER=<user> \
-  --from-literal=DB_PASSWORD=<password> \
-  --from-literal=DB_NAME=splattopblog
+kubectl create secret generic blog-db-secrets \
+  --namespace default \
+  --from-literal=DATABASE_URL=postgresql://<user>:<password>@<host>:5432/splattopblog \
+  --from-literal=DJANGO_SECRET_KEY=<secret>
 ```
 
 ## CI/CD Flow

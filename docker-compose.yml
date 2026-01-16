@@ -30,11 +30,7 @@ services:
     environment:
       - DEBUG=true
       - DJANGO_SECRET_KEY=dev-secret-key-change-in-production
-      - SQL_HOST=db
-      - SQL_PORT=5432
-      - SQL_DATABASE=splattopblog
-      - SQL_USER=postgres
-      - SQL_PASSWORD=postgres
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/splattopblog
       - ALLOWED_HOSTS=localhost,127.0.0.1
       - CSRF_TRUSTED_ORIGINS=http://localhost:8000
     depends_on:

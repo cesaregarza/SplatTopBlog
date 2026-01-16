@@ -4,6 +4,7 @@ Django settings for splattopblog project.
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from dotenv import load_dotenv
 
@@ -85,15 +86,56 @@ WSGI_APPLICATION = "splattopblog.wsgi.application"
 
 # Database
 # Use PostgreSQL in production, SQLite for local development
-if os.environ.get("DATABASE_URL") or os.environ.get("SQL_HOST"):
+def get_env(primary_key: str, *fallback_keys: str, default: str | None = None) -> str | None:
+    for key in (primary_key, *fallback_keys):
+        value = os.environ.get(key)
+        if value:
+            return value
+    return default
+
+
+def parse_database_url(database_url: str) -> dict:
+    parsed = urlparse(database_url)
+    scheme = parsed.scheme.split("+", 1)[0]
+    if scheme not in {"postgres", "postgresql"}:
+        raise ValueError(f"Unsupported DATABASE_URL scheme: {parsed.scheme}")
+
+    config: dict[str, object] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": (parsed.path or "").lstrip("/") or "splattopblog",
+        "USER": parsed.username or "",
+        "PASSWORD": parsed.password or "",
+        "HOST": parsed.hostname or "",
+    }
+    if parsed.port:
+        config["PORT"] = str(parsed.port)
+
+    query = parse_qs(parsed.query)
+    options: dict[str, str] = {}
+    if "sslmode" in query:
+        options["sslmode"] = query["sslmode"][0]
+    if "options" in query:
+        options["options"] = query["options"][0]
+    if options:
+        config["OPTIONS"] = options
+    return config
+
+
+database_url = os.environ.get("DATABASE_URL")
+sql_host = get_env("SQL_HOST", "DB_HOST")
+if database_url:
+    DATABASES = {
+        "default": parse_database_url(database_url),
+    }
+elif sql_host:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("SQL_DATABASE", "splattopblog"),
-            "USER": os.environ.get("SQL_USER", "postgres"),
-            "PASSWORD": os.environ.get("SQL_PASSWORD", ""),
-            "HOST": os.environ.get("SQL_HOST", "localhost"),
-            "PORT": os.environ.get("SQL_PORT", "5432"),
+            "NAME": get_env("SQL_DATABASE", "DB_NAME", default="splattopblog"),
+            "USER": get_env("SQL_USER", "DB_USER", default="postgres"),
+            "PASSWORD": get_env("SQL_PASSWORD", "DB_PASSWORD", default=""),
+            "HOST": sql_host or "localhost",
+            "PORT": get_env("SQL_PORT", "DB_PORT", default="5432"),
         }
     }
 else:

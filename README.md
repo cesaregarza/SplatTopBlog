@@ -83,9 +83,9 @@ cp .env.local .env
 | `DEBUG` | Enable debug mode | `true` |
 | `DJANGO_SECRET_KEY` | Django secret key | (required in prod) |
 | `ALLOWED_HOSTS` | Comma-separated hosts | `localhost,127.0.0.1` |
-| `SQL_HOST` | PostgreSQL host | (empty = SQLite) |
+| `DATABASE_URL` | PostgreSQL connection string | (empty = SQLite) |
 
-**Note:** When `SQL_HOST` is not set, the app uses SQLite, which is perfect for local development.
+**Note:** When `DATABASE_URL` is not set, the app uses SQLite, which is perfect for local development.
 
 ## Production Deployment
 
