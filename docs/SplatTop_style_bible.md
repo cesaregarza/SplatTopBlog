@@ -119,6 +119,20 @@ linear-gradient(to right top, #00ff55 23%, #ffe900 26% 49%, #cc6600 52% 75%, #00
 linear-gradient(to left top, #117733 23%, #ddcc77 26% 49%, #aa4499 52% 75%, #332288 78%)
 ```
 
+### Blog Graphics Palette
+
+Used for LOOPR blog charts and applets.
+
+- Background: `#0f172a`
+- Panel: `#111827`
+- Text: `#ffffff`
+- Muted text: `#c9d1d9`
+- Accents: `#ab5ab7` (purple), `#c183e1` (purple light), `#c026d3` (fuchsia),
+  `#d946ef` (fuchsia light), `#ec4899` (pink), `#f472b6` (rose), `#38bdf8`
+  (cyan)
+- Grid: `rgba(255, 255, 255, 0.08)`
+- Borders: `rgba(255, 255, 255, 0.12)`
+
 ---
 
 ## Typography
