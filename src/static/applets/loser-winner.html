@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Loser -> Winner Edge Construction + Influence</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --text: #ffffff;
+        --muted: #c9d1d9;
+        --edge: rgba(255, 255, 255, 0.12);
+        --grid: rgba(255, 255, 255, 0.08);
+        --purple: #ab5ab7;
+        --blue: #38bdf8;
+        --fuchsia: #d946ef;
+        --glow: rgba(217, 70, 239, 0.28);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background:
+          radial-gradient(circle at 20% 20%, rgba(217, 70, 239, 0.12), transparent 45%),
+          radial-gradient(circle at 80% 10%, rgba(236, 72, 153, 0.12), transparent 40%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      }
+
+      html.is-embedded body {
+        display: block;
+        padding: 0;
+        background: transparent;
+      }
+
+      html.is-embedded .applet {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .applet {
+        width: min(980px, 100%);
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), var(--panel));
+        border: 1px solid var(--edge);
+        border-radius: 16px;
+        box-shadow: 0 18px 42px rgba(1, 4, 9, 0.55);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .applet::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.06), transparent 35%),
+          radial-gradient(circle at 90% 30%, rgba(255, 255, 255, 0.04), transparent 40%);
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      .header {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.10);
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid rgba(255,255,255,0.16);
+        background: rgba(255,255,255,0.06);
+        color: var(--text);
+        padding: 7px 10px;
+        border-radius: 10px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:hover { background: rgba(255,255,255,0.10); }
+      button:active { transform: translateY(1px); }
+
+      .speed {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      input[type="range"] {
+        width: 140px;
+        height: 8px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: transparent;
+        cursor: pointer;
+        --range-fill: 50%;
+      }
+
+      input[type="range"]::-webkit-slider-runnable-track {
+        height: 8px;
+        background: linear-gradient(
+          90deg,
+          rgba(232, 121, 249, 0.92) 0%,
+          rgba(217, 70, 239, 0.85) var(--range-fill),
+          rgba(255, 255, 255, 0.14) var(--range-fill),
+          rgba(255, 255, 255, 0.14) 100%
+        );
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 0 6px rgba(1, 4, 9, 0.35);
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
+        border: 2px solid rgba(255, 255, 255, 0.85);
+        box-shadow: 0 0 10px rgba(217, 70, 239, 0.5);
+        margin-top: -5px;
+      }
+
+      input[type="range"]::-moz-range-track {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.14);
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 0 6px rgba(1, 4, 9, 0.35);
+      }
+
+      input[type="range"]::-moz-range-progress {
+        height: 8px;
+        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
+        border-radius: 9999px;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
+        border: 2px solid rgba(255, 255, 255, 0.85);
+        box-shadow: 0 0 10px rgba(217, 70, 239, 0.5);
+      }
+
+      input[type="range"]::-moz-focus-outer {
+        border: 0;
+      }
+
+      input[type="range"]:focus-visible {
+        outline: 2px solid rgba(217, 70, 239, 0.55);
+        outline-offset: 3px;
+      }
+
+      .status {
+        color: var(--muted);
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 55%;
+      }
+
+      .stage {
+        position: relative;
+        z-index: 1;
+        padding: 8px 12px 12px;
+      }
+
+      svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .label {
+        font-size: 18px;
+        fill: var(--muted);
+        letter-spacing: 0.3px;
+      }
+
+      .subtitle {
+        font-size: 16px;
+        fill: var(--muted);
+        letter-spacing: 0.4px;
+      }
+
+      html.is-narrow .subtitle {
+        font-size: 18px;
+      }
+
+      .node circle {
+        stroke: rgba(255, 255, 255, 0.18);
+        stroke-width: 1.1;
+        filter: drop-shadow(0 0 10px var(--glow));
+        transition: r 260ms ease;
+      }
+
+      .node text.name {
+        font-size: 16px;
+        font-weight: 700;
+        fill: #ffffff;
+      }
+
+      .node text.value {
+        font-size: 12px;
+        fill: rgba(255,255,255,0.78);
+      }
+
+      .node--left circle { fill: var(--blue); }
+      .node--right circle { fill: var(--purple); }
+
+      .node.is-active circle {
+        stroke: rgba(255,255,255,0.9);
+        stroke-width: 2.2;
+        filter: drop-shadow(0 0 18px rgba(255,255,255,0.18));
+      }
+
+      .edge {
+        --edge-opacity: 0.32;
+        --flow-duration: 4.4s;
+
+        stroke: var(--fuchsia);
+        stroke-width: 1.9;
+        opacity: 0; /* hidden until "drawn" */
+        fill: none;
+
+        stroke-linecap: round;
+      }
+
+      .edge.edge--slow { --edge-opacity: 0.24; --flow-duration: 6.2s; }
+      .edge.edge--fast { --edge-opacity: 0.40; --flow-duration: 3.4s; }
+
+      .edge.is-drawn {
+        opacity: var(--edge-opacity);
+      }
+
+      .edge.is-flowing {
+        stroke-dasharray: 7 12;
+        animation: flow var(--flow-duration) linear infinite;
+      }
+
+      .edge.is-active {
+        opacity: 0.95;
+        stroke-width: 3.0;
+        filter: drop-shadow(0 0 10px rgba(217, 70, 239, 0.35));
+      }
+
+      .arrowhead { fill: var(--fuchsia); }
+
+      .particle {
+        opacity: 0;
+        fill: rgba(255,255,255,0.92);
+        filter: drop-shadow(0 0 10px rgba(217, 70, 239, 0.35));
+      }
+
+      @keyframes flow {
+        to { stroke-dashoffset: -120; }
+      }
+
+      @media (max-width: 560px) {
+        .header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 10px;
+        }
+
+        .controls {
+          width: 100%;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        button {
+          padding: 10px 12px;
+          border-radius: 12px;
+          width: 100%;
+          white-space: nowrap;
+        }
+
+        .speed {
+          width: 100%;
+          justify-content: space-between;
+          display: flex;
+          grid-column: 1 / -1;
+        }
+
+        input[type="range"] { flex: 1; }
+
+        .status { max-width: 100%; }
+
+        .status {
+          white-space: normal;
+          overflow: visible;
+          text-overflow: clip;
+          line-height: 1.4;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .edge.is-flowing { animation: none; }
+        .node circle { transition: none; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="applet">
+      <div class="header">
+        <div class="controls">
+          <button id="btnPlay">Play</button>
+          <button id="btnPause">Pause</button>
+          <button id="btnStep">Step</button>
+          <button id="btnReset">Reset</button>
+
+          <span class="speed">
+            Speed
+            <input id="speed" type="range" min="0.5" max="2.5" step="0.1" value="1.2" />
+            <span id="speedLabel">1.2x</span>
+          </span>
+        </div>
+        <div class="status" id="status">Ready.</div>
+      </div>
+
+      <div class="stage">
+        <svg viewBox="0 0 900 480" role="img" aria-labelledby="title desc">
+          <title id="title">Construct edges from losers to winners, then transfer influence</title>
+          <desc id="desc">
+            Four losing players connect to four winning players with directed
+            edges. Then influence flows from losers to winners, shrinking losers
+            and growing winners.
+          </desc>
+
+          <defs>
+            <marker
+              id="arrow"
+              viewBox="0 0 12 12"
+              refX="12"
+              refY="6"
+              markerWidth="12"
+              markerHeight="12"
+              orient="auto"
+              markerUnits="userSpaceOnUse"
+            >
+              <path class="arrowhead" d="M 0 0 L 12 6 L 0 12 Z"></path>
+            </marker>
+          </defs>
+
+          <text id="labelB" x="170" y="60" class="label" text-anchor="middle">Team B (losers)</text>
+          <text id="labelA" x="730" y="60" class="label" text-anchor="middle">Team A (winners)</text>
+
+          <g id="edges"></g>
+
+          <!-- Nodes (centers at translate(x y)) -->
+          <g class="node node--left" data-team="B" data-idx="0" transform="translate(170 120)">
+            <circle r="22"></circle>
+            <text class="name" text-anchor="middle" dominant-baseline="middle">B1</text>
+            <text class="value" text-anchor="middle" y="40">1.00</text>
+          </g>
+          <g class="node node--left" data-team="B" data-idx="1" transform="translate(170 200)">
+            <circle r="22"></circle>
+            <text class="name" text-anchor="middle" dominant-baseline="middle">B2</text>
+            <text class="value" text-anchor="middle" y="40">1.00</text>
+          </g>
+          <g class="node node--left" data-team="B" data-idx="2" transform="translate(170 280)">
+            <circle r="22"></circle>
+            <text class="name" text-anchor="middle" dominant-baseline="middle">B3</text>
+            <text class="value" text-anchor="middle" y="40">1.00</text>
+          </g>
+          <g class="node node--left" data-team="B" data-idx="3" transform="translate(170 360)">
+            <circle r="22"></circle>
+            <text class="name" text-anchor="middle" dominant-baseline="middle">B4</text>
+            <text class="value" text-anchor="middle" y="40">1.00</text>
+          </g>
+
+          <g class="node node--right" data-team="A" data-idx="0" transform="translate(730 120)">
+            <circle r="22"></circle>
+            <text class="name" text-anchor="middle" dominant-baseline="middle">A1</text>
+            <text class="value" text-anchor="middle" y="40">1.00</text>
+          </g>
+          <g class="node node--right" data-team="A" data-idx="1" transform="translate(730 200)">
+            <circle r="22"></circle>
+            <text class="name" text-anchor="middle" dominant-baseline="middle">A2</text>
+            <text class="value" text-anchor="middle" y="40">1.00</text>
+          </g>
+          <g class="node node--right" data-team="A" data-idx="2" transform="translate(730 280)">
+            <circle r="22"></circle>
+            <text class="name" text-anchor="middle" dominant-baseline="middle">A3</text>
+            <text class="value" text-anchor="middle" y="40">1.00</text>
+          </g>
+          <g class="node node--right" data-team="A" data-idx="3" transform="translate(730 360)">
+            <circle r="22"></circle>
+            <text class="name" text-anchor="middle" dominant-baseline="middle">A4</text>
+            <text class="value" text-anchor="middle" y="40">1.00</text>
+          </g>
+
+          <circle id="particle" class="particle" r="4" cx="0" cy="0"></circle>
+
+          <text id="subtitle" x="450" y="440" class="subtitle" text-anchor="middle">
+            Phase 1: construct 16 edges | Phase 2: flow influence (loser -> winner)
+          </text>
+        </svg>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const isEmbedded = (() => {
+          try {
+            return window.self !== window.top;
+          } catch (err) {
+            return true;
+          }
+        })();
+
+        if (isEmbedded) {
+          document.documentElement.classList.add("is-embedded");
+        }
+
+        const statusEl = document.getElementById("status");
+        const btnPlay = document.getElementById("btnPlay");
+        const btnPause = document.getElementById("btnPause");
+        const btnStep = document.getElementById("btnStep");
+        const btnReset = document.getElementById("btnReset");
+        const speedInput = document.getElementById("speed");
+        const speedLabel = document.getElementById("speedLabel");
+
+        const edgeLayer = document.getElementById("edges");
+        const particle = document.getElementById("particle");
+        const appletEl = document.querySelector(".applet");
+        const svg = document.querySelector(".stage svg");
+        const labelB = document.getElementById("labelB");
+        const labelA = document.getElementById("labelA");
+        const subtitle = document.getElementById("subtitle");
+
+        const baseR = 22;
+        const inset = 0; // small gap if you want: 1 or 2
+
+        // Mass starts equal; influence will shift B -> A.
+        const massB = [1, 1, 1, 1];
+        const massA = [1, 1, 1, 1];
+
+        // Per-edge transfer amount (illustrative)
+        const transferPerEdge = 0.06;
+
+        // Node DOM refs
+        const nodesB = [...document.querySelectorAll('.node[data-team="B"]')];
+        const nodesA = [...document.querySelectorAll('.node[data-team="A"]')];
+
+        let posB = [];
+        let posA = [];
+        let currentLayout = null;
+
+        function linspace4(min, max) {
+          const step = (max - min) / 3;
+          return [min, min + step, min + 2 * step, max];
+        }
+
+        function getLayoutForWidth(wPx) {
+          return wPx < 620 ? "narrow" : "wide";
+        }
+
+        function layoutSpec(name) {
+          if (name === "narrow") {
+            const W = 480;
+            const H = 720;
+            const xs = linspace4(80, 400);
+            const yTop = 170;
+            const yBot = 530;
+            const subtitleY = 680;
+
+            return {
+              name,
+              viewBox: `0 0 ${W} ${H}`,
+              labelB: { x: W / 2, y: 60 },
+              labelA: { x: W / 2, y: 660 },
+              subtitle: { x: W / 2, y: subtitleY },
+              posB: xs.map((x) => ({ x, y: yTop })),
+              posA: xs.map((x) => ({ x, y: yBot })),
+              valueY: (team) => (team === "B" ? -34 : 40),
+              labelText: {
+                B: "Team B (losers)",
+                A: "Team A (winners)",
+              },
+              subtitleLines: [
+                "Phase 1: build edges",
+                "Phase 2: flow influence (top -> bottom)",
+              ],
+              subtitleLineHeight: 22,
+            };
+          }
+
+          const W = 900;
+          const H = 480;
+          const ys = [120, 200, 280, 360];
+
+          return {
+            name: "wide",
+            viewBox: `0 0 ${W} ${H}`,
+            labelB: { x: 170, y: 60 },
+            labelA: { x: 730, y: 60 },
+            subtitle: { x: 450, y: 440 },
+            posB: ys.map((y) => ({ x: 170, y })),
+            posA: ys.map((y) => ({ x: 730, y })),
+            valueY: () => 40,
+            labelText: {
+              B: "Team B (losers)",
+              A: "Team A (winners)",
+            },
+            subtitleLines: [
+              "Phase 1: construct 16 edges | Phase 2: flow influence (loser -> winner)",
+            ],
+            subtitleLineHeight: 0,
+          };
+        }
+
+        function setSubtitleLines(lines, x, y, lineHeight) {
+          while (subtitle.firstChild) subtitle.removeChild(subtitle.firstChild);
+          subtitle.setAttribute("x", x);
+          subtitle.setAttribute("y", y);
+
+          const step = lineHeight || 0;
+          lines.forEach((line, index) => {
+            const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+            tspan.setAttribute("x", x);
+            tspan.setAttribute("dy", index === 0 ? "0" : String(step));
+            tspan.textContent = line;
+            subtitle.appendChild(tspan);
+          });
+        }
+
+        function applyLayout(name) {
+          const spec = layoutSpec(name);
+          currentLayout = name;
+          document.documentElement.classList.toggle("is-narrow", name === "narrow");
+
+          svg.setAttribute("viewBox", spec.viewBox);
+
+          labelB.setAttribute("x", spec.labelB.x);
+          labelB.setAttribute("y", spec.labelB.y);
+          labelB.textContent = spec.labelText.B;
+
+          labelA.setAttribute("x", spec.labelA.x);
+          labelA.setAttribute("y", spec.labelA.y);
+          labelA.textContent = spec.labelText.A;
+
+          setSubtitleLines(
+            spec.subtitleLines,
+            spec.subtitle.x,
+            spec.subtitle.y,
+            spec.subtitleLineHeight
+          );
+
+          posB = spec.posB;
+          posA = spec.posA;
+
+          for (let i = 0; i < 4; i++) {
+            nodesB[i].setAttribute("transform", `translate(${posB[i].x} ${posB[i].y})`);
+            nodesA[i].setAttribute("transform", `translate(${posA[i].x} ${posA[i].y})`);
+
+            nodesB[i].querySelector("text.value").setAttribute("y", spec.valueY("B"));
+            nodesA[i].querySelector("text.value").setAttribute("y", spec.valueY("A"));
+          }
+
+          renderNodes();
+          updateAllEdgesGeometry();
+        }
+
+        function setStatus(msg) { statusEl.textContent = msg; }
+
+        function radiusFromMass(m) {
+          // Area-proportional sizing; tweak if you want more dramatic change.
+          return baseR * Math.sqrt(Math.max(0.05, m));
+        }
+
+        function renderNodes() {
+          for (let i = 0; i < 4; i++) {
+            const rB = radiusFromMass(massB[i]);
+            const rA = radiusFromMass(massA[i]);
+
+            nodesB[i].querySelector("circle").setAttribute("r", rB.toFixed(2));
+            nodesA[i].querySelector("circle").setAttribute("r", rA.toFixed(2));
+
+            nodesB[i].querySelector("text.value").textContent = massB[i].toFixed(2);
+            nodesA[i].querySelector("text.value").textContent = massA[i].toFixed(2);
+          }
+        }
+
+        function clearActive() {
+          [...nodesB, ...nodesA].forEach(n => n.classList.remove("is-active"));
+        }
+
+        function activatePair(i, j) {
+          clearActive();
+          nodesB[i].classList.add("is-active");
+          nodesA[j].classList.add("is-active");
+        }
+
+        function endpoints(x1c, y1c, x2c, y2c, r1, r2) {
+          const dx = x2c - x1c;
+          const dy = y2c - y1c;
+          const len = Math.hypot(dx, dy) || 1;
+          const ux = dx / len;
+          const uy = dy / len;
+          return {
+            x1: x1c + ux * (r1 + inset),
+            y1: y1c + uy * (r1 + inset),
+            x2: x2c - ux * (r2 + inset),
+            y2: y2c - uy * (r2 + inset),
+          };
+        }
+
+        // Edge objects: {i, j, path, flavor}
+        const edges = [];
+
+        function makeEdge(i, j) {
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.classList.add("edge");
+
+          const flavor = (i + j) % 3;
+          if (flavor === 0) path.classList.add("edge--fast");
+          else if (flavor === 1) path.classList.add("edge--slow");
+
+          path.setAttribute("marker-end", "url(#arrow)");
+          edgeLayer.appendChild(path);
+
+          return { i, j, path, drawn: false };
+        }
+
+        function updateEdgeGeometry(e) {
+          const i = e.i, j = e.j;
+
+          const rB = parseFloat(nodesB[i].querySelector("circle").getAttribute("r")) || baseR;
+          const rA = parseFloat(nodesA[j].querySelector("circle").getAttribute("r")) || baseR;
+
+          const s = posB[i];
+          const t = posA[j];
+          const p = endpoints(s.x, s.y, t.x, t.y, rB, rA);
+          e.path.setAttribute("d", `M ${p.x1.toFixed(2)} ${p.y1.toFixed(2)} L ${p.x2.toFixed(2)} ${p.y2.toFixed(2)}`);
+        }
+
+        function updateAllEdgesGeometry() {
+          edges.forEach(updateEdgeGeometry);
+        }
+
+        async function drawEdge(e, durationMs) {
+          updateEdgeGeometry(e);
+
+          const len = e.path.getTotalLength();
+          e.path.style.transition = "none";
+          e.path.style.strokeDasharray = `${len}`;
+          e.path.style.strokeDashoffset = `${len}`;
+          e.path.style.opacity = "0";
+
+          // Force layout so transitions apply
+          e.path.getBoundingClientRect();
+
+          e.path.style.transition = `stroke-dashoffset ${durationMs}ms ease, opacity ${durationMs}ms ease`;
+          e.path.classList.add("is-drawn");
+          e.path.style.opacity = ""; // let class control it
+          e.path.style.strokeDashoffset = "0";
+
+          await waitTransitionEnd(e.path, durationMs + 60);
+
+          // Switch to a flowing dashed look after it's drawn
+          e.path.style.transition = "";
+          e.path.style.strokeDasharray = "7 12";
+          e.path.classList.add("is-flowing");
+          e.drawn = true;
+        }
+
+        function waitTransitionEnd(el, fallbackMs) {
+          return new Promise((resolve) => {
+            let done = false;
+            const t = setTimeout(() => {
+              if (done) return;
+              done = true;
+              el.removeEventListener("transitionend", onEnd);
+              resolve();
+            }, fallbackMs);
+
+            function onEnd(ev) {
+              if (done) return;
+              if (ev.target !== el) return;
+              done = true;
+              clearTimeout(t);
+              el.removeEventListener("transitionend", onEnd);
+              resolve();
+            }
+
+            el.addEventListener("transitionend", onEnd);
+          });
+        }
+
+        function animateParticleAlongPath(pathEl, durationMs) {
+          return new Promise((resolve) => {
+            const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (reduce) {
+              // In reduced-motion, just blink it quickly.
+              particle.style.opacity = "0.9";
+              setTimeout(() => { particle.style.opacity = "0"; resolve(); }, 80);
+              return;
+            }
+
+            const len = pathEl.getTotalLength();
+            const start = performance.now();
+
+            particle.style.opacity = "0.9";
+
+            function tick(now) {
+              const t = Math.min(1, (now - start) / durationMs);
+              const p = pathEl.getPointAtLength(len * t);
+              particle.setAttribute("cx", p.x.toFixed(2));
+              particle.setAttribute("cy", p.y.toFixed(2));
+              if (t < 1) requestAnimationFrame(tick);
+              else {
+                particle.style.opacity = "0";
+                resolve();
+              }
+            }
+            requestAnimationFrame(tick);
+          });
+        }
+
+        function setRangeFill() {
+          const min = parseFloat(speedInput.min);
+          const max = parseFloat(speedInput.max);
+          const val = parseFloat(speedInput.value);
+          if (Number.isNaN(min) || Number.isNaN(max) || max === min) {
+            speedInput.style.setProperty("--range-fill", "50%");
+            return;
+          }
+          const pct = ((val - min) / (max - min)) * 100;
+          speedInput.style.setProperty("--range-fill", `${pct.toFixed(1)}%`);
+        }
+
+        function setSpeedLabel() {
+          const s = parseFloat(speedInput.value);
+          speedLabel.textContent = `${s.toFixed(1)}x`;
+          setRangeFill();
+          return s;
+        }
+
+        // Build action list:
+        // - first 16 actions: draw edges (construction)
+        // - next 16 actions: transfer along each edge (influence)
+        const actions = [];
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0; j < 4; j++) actions.push({ type: "build", i, j });
+        }
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0; j < 4; j++) actions.push({ type: "transfer", i, j });
+        }
+
+        // Runtime state
+        let cursor = 0;
+        let playing = false;
+
+        function getEdge(i, j) {
+          return edges[i * 4 + j];
+        }
+
+        async function runOneAction() {
+          if (cursor >= actions.length) {
+            setStatus("Done. (Reset to replay)");
+            return;
+          }
+
+          const speed = setSpeedLabel();
+          const action = actions[cursor];
+
+          const e = getEdge(action.i, action.j);
+          const buildIndex = cursor < 16 ? cursor + 1 : 16;
+          const transferIndex = cursor >= 16 ? (cursor - 16) + 1 : 0;
+
+          activatePair(action.i, action.j);
+
+          if (action.type === "build") {
+            setStatus(`Constructing edges: B${action.i + 1} -> A${action.j + 1}  (${buildIndex}/16)`);
+            if (!e.drawn) {
+              const dur = Math.round(260 / speed);
+              await drawEdge(e, dur);
+            }
+          } else {
+            setStatus(`Influence flow: B${action.i + 1} -> A${action.j + 1}  (${transferIndex}/16)`);
+
+            // Highlight active edge
+            e.path.classList.add("is-active");
+
+            // Particle travel
+            const dur = Math.round(420 / speed);
+            await animateParticleAlongPath(e.path, dur);
+
+            // Update "mass" (illustrative)
+            massB[action.i] = Math.max(0.10, massB[action.i] - transferPerEdge);
+            massA[action.j] = massA[action.j] + transferPerEdge;
+
+            // Re-render radii + keep edge endpoints aligned with new radii
+            renderNodes();
+            updateAllEdgesGeometry();
+
+            // Un-highlight
+            e.path.classList.remove("is-active");
+          }
+
+          cursor += 1;
+
+          if (cursor === 16) {
+            clearActive();
+            setStatus("Construction complete: 16 edges built. Next: influence flow.");
+          } else if (cursor === actions.length) {
+            clearActive();
+            setStatus("Done. Construction + influence flow complete.");
+          }
+        }
+
+        async function playLoop() {
+          if (playing) return;
+          playing = true;
+
+          while (playing && cursor < actions.length) {
+            await runOneAction();
+            // small pacing gap so it feels intentional
+            const speed = parseFloat(speedInput.value);
+            await new Promise(r => setTimeout(r, Math.round(40 / speed)));
+          }
+
+          playing = false;
+        }
+
+        function pause() {
+          playing = false;
+          setStatus("Paused.");
+        }
+
+        function reset() {
+          playing = false;
+          cursor = 0;
+
+          // Reset mass
+          for (let i = 0; i < 4; i++) { massB[i] = 1; massA[i] = 1; }
+
+          // Clear edges
+          edgeLayer.innerHTML = "";
+          edges.length = 0;
+
+          // Recreate edges
+          for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) edges.push(makeEdge(i, j));
+          }
+
+          const layoutWidth = appletEl.getBoundingClientRect().width;
+          applyLayout(getLayoutForWidth(layoutWidth));
+          clearActive();
+          setStatus("Ready. Step to construct edges, then flow influence.");
+        }
+
+        function handleResize(widthPx) {
+          const next = getLayoutForWidth(widthPx);
+          if (next !== currentLayout) applyLayout(next);
+        }
+
+        if ("ResizeObserver" in window) {
+          const ro = new ResizeObserver((entries) => {
+            if (!entries.length) return;
+            handleResize(entries[0].contentRect.width);
+          });
+          ro.observe(appletEl);
+        } else {
+          window.addEventListener("resize", () => {
+            handleResize(appletEl.getBoundingClientRect().width);
+          });
+        }
+
+        // Wire UI
+        btnPlay.addEventListener("click", playLoop);
+        btnPause.addEventListener("click", pause);
+        btnStep.addEventListener("click", async () => { pause(); await runOneAction(); });
+        btnReset.addEventListener("click", reset);
+        speedInput.addEventListener("input", () => setSpeedLabel());
+
+        // Init
+        reset();
+        setSpeedLabel();
+      })();
+    </script>
+  </body>
+</html>
