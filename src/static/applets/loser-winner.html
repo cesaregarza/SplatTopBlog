@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Loser -> Winner Edge Construction + Influence</title>
+    <link rel="stylesheet" href="/static/css/applet-base.css" />
     <style>
       :root {
         --bg: #0f172a;
@@ -16,54 +17,7 @@
         --blue: #38bdf8;
         --fuchsia: #d946ef;
         --glow: rgba(217, 70, 239, 0.28);
-      }
-
-      * { box-sizing: border-box; }
-      html, body { height: 100%; margin: 0; }
-
-      body {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        background:
-          radial-gradient(circle at 20% 20%, rgba(217, 70, 239, 0.12), transparent 45%),
-          radial-gradient(circle at 80% 10%, rgba(236, 72, 153, 0.12), transparent 40%),
-          var(--bg);
-        color: var(--text);
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      }
-
-      html.is-embedded body {
-        display: block;
-        padding: 0;
-        background: transparent;
-      }
-
-      html.is-embedded .applet {
-        width: 100%;
-        max-width: 100%;
-      }
-
-      .applet {
-        width: min(980px, 100%);
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), var(--panel));
-        border: 1px solid var(--edge);
-        border-radius: 16px;
-        box-shadow: 0 18px 42px rgba(1, 4, 9, 0.55);
-        overflow: hidden;
-        position: relative;
-      }
-
-      .applet::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image:
-          radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.06), transparent 35%),
-          radial-gradient(circle at 90% 30%, rgba(255, 255, 255, 0.04), transparent 40%);
-        opacity: 0.4;
-        pointer-events: none;
+        --applet-max-width: 980px;
       }
 
       .header {
@@ -84,18 +38,7 @@
         flex-wrap: wrap;
       }
 
-      button {
-        appearance: none;
-        border: 1px solid rgba(255,255,255,0.16);
-        background: rgba(255,255,255,0.06);
-        color: var(--text);
-        padding: 7px 10px;
-        border-radius: 10px;
-        font: inherit;
-        cursor: pointer;
-      }
-      button:hover { background: rgba(255,255,255,0.10); }
-      button:active { transform: translateY(1px); }
+      button { padding: 7px 10px; }
 
       .speed {
         display: inline-flex;
@@ -105,73 +48,6 @@
         font-size: 14px;
       }
 
-      input[type="range"] {
-        width: 140px;
-        height: 8px;
-        appearance: none;
-        -webkit-appearance: none;
-        background: transparent;
-        cursor: pointer;
-        --range-fill: 50%;
-      }
-
-      input[type="range"]::-webkit-slider-runnable-track {
-        height: 8px;
-        background: linear-gradient(
-          90deg,
-          rgba(232, 121, 249, 0.92) 0%,
-          rgba(217, 70, 239, 0.85) var(--range-fill),
-          rgba(255, 255, 255, 0.14) var(--range-fill),
-          rgba(255, 255, 255, 0.14) 100%
-        );
-        border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        box-shadow: inset 0 0 6px rgba(1, 4, 9, 0.35);
-      }
-
-      input[type="range"]::-webkit-slider-thumb {
-        appearance: none;
-        -webkit-appearance: none;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
-        border: 2px solid rgba(255, 255, 255, 0.85);
-        box-shadow: 0 0 10px rgba(217, 70, 239, 0.5);
-        margin-top: -5px;
-      }
-
-      input[type="range"]::-moz-range-track {
-        height: 8px;
-        background: rgba(255, 255, 255, 0.14);
-        border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        box-shadow: inset 0 0 6px rgba(1, 4, 9, 0.35);
-      }
-
-      input[type="range"]::-moz-range-progress {
-        height: 8px;
-        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
-        border-radius: 9999px;
-      }
-
-      input[type="range"]::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
-        border: 2px solid rgba(255, 255, 255, 0.85);
-        box-shadow: 0 0 10px rgba(217, 70, 239, 0.5);
-      }
-
-      input[type="range"]::-moz-focus-outer {
-        border: 0;
-      }
-
-      input[type="range"]:focus-visible {
-        outline: 2px solid rgba(217, 70, 239, 0.55);
-        outline-offset: 3px;
-      }
 
       .status {
         color: var(--muted);
@@ -186,12 +62,6 @@
         position: relative;
         z-index: 1;
         padding: 8px 12px 12px;
-      }
-
-      svg {
-        width: 100%;
-        height: auto;
-        display: block;
       }
 
       .label {
@@ -425,18 +295,11 @@
       </div>
     </div>
 
+    <script src="/static/js/applet-utils.js"></script>
     <script>
       (() => {
-        const isEmbedded = (() => {
-          try {
-            return window.self !== window.top;
-          } catch (err) {
-            return true;
-          }
-        })();
-
-        if (isEmbedded) {
-          document.documentElement.classList.add("is-embedded");
+        if (window.AppletUtils) {
+          window.AppletUtils.initEmbed();
         }
 
         const statusEl = document.getElementById("status");
@@ -744,22 +607,12 @@
           });
         }
 
-        function setRangeFill() {
-          const min = parseFloat(speedInput.min);
-          const max = parseFloat(speedInput.max);
-          const val = parseFloat(speedInput.value);
-          if (Number.isNaN(min) || Number.isNaN(max) || max === min) {
-            speedInput.style.setProperty("--range-fill", "50%");
-            return;
-          }
-          const pct = ((val - min) / (max - min)) * 100;
-          speedInput.style.setProperty("--range-fill", `${pct.toFixed(1)}%`);
-        }
-
         function setSpeedLabel() {
           const s = parseFloat(speedInput.value);
           speedLabel.textContent = `${s.toFixed(1)}x`;
-          setRangeFill();
+          if (window.AppletUtils) {
+            window.AppletUtils.setRangeFill(speedInput);
+          }
           return s;
         }
 
