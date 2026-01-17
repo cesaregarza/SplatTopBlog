@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Volume vs LOOPR</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --text: #ffffff;
+        --muted: #c9d1d9;
+        --edge: rgba(255, 255, 255, 0.12);
+        --grid: rgba(255, 255, 255, 0.08);
+        --purple: #ab5ab7;
+        --purple-light: #c183e1;
+        --fuchsia: #d946ef;
+        --cyan: #38bdf8;
+        --glow: rgba(217, 70, 239, 0.28);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background:
+          radial-gradient(circle at 20% 20%, rgba(217, 70, 239, 0.12), transparent 45%),
+          radial-gradient(circle at 80% 10%, rgba(236, 72, 153, 0.12), transparent 40%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      }
+
+      html.is-embedded body {
+        display: block;
+        padding: 0;
+        background: transparent;
+      }
+
+      html.is-embedded .applet {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .applet {
+        width: min(1100px, 100%);
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), var(--panel));
+        border: 1px solid var(--edge);
+        border-radius: 16px;
+        box-shadow: 0 18px 42px rgba(1, 4, 9, 0.55);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .applet::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.06), transparent 35%),
+          radial-gradient(circle at 90% 30%, rgba(255, 255, 255, 0.04), transparent 40%);
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      .header {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 16px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.10);
+      }
+
+      .meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 260px;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+
+      .subtitle {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+        gap: 12px 16px;
+        align-items: end;
+      }
+
+      .slider-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .slider-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .slider-value {
+        min-width: 56px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid rgba(255,255,255,0.16);
+        background: rgba(255,255,255,0.06);
+        color: var(--text);
+        padding: 7px 12px;
+        border-radius: 10px;
+        font: inherit;
+        cursor: pointer;
+        height: 36px;
+      }
+      button:hover { background: rgba(255,255,255,0.10); }
+      button:active { transform: translateY(1px); }
+
+      input[type="range"] {
+        width: 160px;
+        height: 8px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: transparent;
+        cursor: pointer;
+        --range-fill: 50%;
+      }
+
+      input[type="range"]::-webkit-slider-runnable-track {
+        height: 8px;
+        background: linear-gradient(
+          90deg,
+          rgba(232, 121, 249, 0.92) 0%,
+          rgba(217, 70, 239, 0.85) var(--range-fill),
+          rgba(255, 255, 255, 0.14) var(--range-fill),
+          rgba(255, 255, 255, 0.14) 100%
+        );
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 0 6px rgba(1, 4, 9, 0.35);
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
+        border: 2px solid rgba(255, 255, 255, 0.85);
+        box-shadow: 0 0 10px rgba(217, 70, 239, 0.5);
+        margin-top: -5px;
+      }
+
+      input[type="range"]::-moz-range-track {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.14);
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: inset 0 0 6px rgba(1, 4, 9, 0.35);
+      }
+
+      input[type="range"]::-moz-range-progress {
+        height: 8px;
+        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
+        border-radius: 9999px;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(232, 121, 249, 0.95), rgba(217, 70, 239, 0.95));
+        border: 2px solid rgba(255, 255, 255, 0.85);
+        box-shadow: 0 0 10px rgba(217, 70, 239, 0.5);
+      }
+
+      input[type="range"]::-moz-focus-outer {
+        border: 0;
+      }
+
+      input[type="range"]:focus-visible {
+        outline: 2px solid rgba(217, 70, 239, 0.55);
+        outline-offset: 3px;
+      }
+
+      .stage {
+        position: relative;
+        z-index: 1;
+        padding: 12px 14px 16px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .panel {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 12px;
+        min-width: 0;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: rgba(201, 209, 217, 0.75);
+        margin-bottom: 10px;
+      }
+
+      .pair-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .pair-card {
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 10px;
+        background: rgba(15, 23, 42, 0.5);
+      }
+
+      .pair-card.grinder {
+        border-color: rgba(217, 70, 239, 0.35);
+        box-shadow: 0 0 12px rgba(217, 70, 239, 0.18);
+      }
+
+      .pair-card.casual {
+        border-color: rgba(56, 189, 248, 0.35);
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.18);
+      }
+
+      .pair-name {
+        font-weight: 700;
+        font-size: 13px;
+      }
+
+      .pair-meta {
+        margin-top: 6px;
+        font-size: 12px;
+        color: rgba(201, 209, 217, 0.78);
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .metric-row {
+        display: grid;
+        grid-template-columns: 130px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        padding: 10px 0;
+        border-top: 1px solid rgba(255,255,255,0.06);
+      }
+
+      .metric-row:first-of-type {
+        border-top: 0;
+      }
+
+      .metric-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .bar-line {
+        display: grid;
+        grid-template-columns: 80px minmax(0, 1fr) 64px;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+
+      .bar-label {
+        font-size: 12px;
+        color: rgba(201, 209, 217, 0.85);
+        white-space: nowrap;
+      }
+
+      .bar-track {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 9999px;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        display: block;
+        height: 100%;
+        width: 0%;
+        border-radius: 9999px;
+        transition: width 200ms ease;
+      }
+
+      .bar-value {
+        font-size: 12px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+      }
+
+      .bar-fill.grinder { background: linear-gradient(90deg, var(--purple), var(--fuchsia)); }
+      .bar-fill.casual { background: linear-gradient(90deg, var(--cyan), rgba(56, 189, 248, 0.6)); }
+
+      .bar-track.split {
+        position: relative;
+      }
+
+      .bar-track.split::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .bar-split {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 0%;
+        transition: width 200ms ease;
+      }
+
+      .bar-split.pos {
+        left: 50%;
+        background: linear-gradient(90deg, var(--purple), var(--fuchsia));
+      }
+
+      .bar-split.neg {
+        right: 50%;
+        background: linear-gradient(90deg, var(--cyan), rgba(56, 189, 248, 0.6));
+      }
+
+      .delta-row {
+        margin-top: 12px;
+        font-size: 12px;
+        color: rgba(201, 209, 217, 0.75);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .delta-row span {
+        display: inline-flex;
+        gap: 6px;
+      }
+
+      details {
+        margin-top: 12px;
+      }
+
+      summary {
+        cursor: pointer;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 12px;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      th, td {
+        padding: 6px 4px;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      th:first-child, td:first-child {
+        text-align: left;
+      }
+
+      thead th {
+        color: rgba(201, 209, 217, 0.8);
+        font-weight: 600;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+
+      tbody tr {
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+
+      tbody tr.highlight {
+        background: rgba(217, 70, 239, 0.08);
+      }
+
+      tbody tr.highlight.casual {
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      .note {
+        font-size: 12px;
+        color: rgba(201, 209, 217, 0.7);
+      }
+
+      .note-line {
+        margin-top: 6px;
+      }
+
+      @media (max-width: 900px) {
+        .stage {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .controls {
+          grid-template-columns: 1fr;
+        }
+
+        input[type="range"] {
+          width: 100%;
+        }
+
+        .metric-row {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+
+        .bar-line {
+          grid-template-columns: 70px minmax(0, 1fr) 60px;
+        }
+
+        .pair-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="applet">
+      <div class="header">
+        <div class="meta">
+          <div class="title">Volume vs LOOPR</div>
+          <div class="subtitle">Exposure teleport + column PageRank on a larger field.</div>
+        </div>
+
+        <div class="controls">
+          <div class="slider-group">
+            <div class="slider-label">Grinder Activity</div>
+            <div class="slider-row">
+              <input id="actSlider" type="range" min="0.2" max="6.0" step="0.1" value="4.0" />
+              <span id="actValue" class="slider-value">4.0</span>
+            </div>
+          </div>
+          <div class="slider-group">
+            <div class="slider-label">Grinder Skill Offset</div>
+            <div class="slider-row">
+              <input id="skillSlider" type="range" min="-1.5" max="1.5" step="0.1" value="0.0" />
+              <span id="skillValue" class="slider-value">0.0</span>
+            </div>
+          </div>
+          <button id="btnReset">Reset</button>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="panel">
+          <div class="hint" id="status">
+            Equal skills: production LOOPR still shifts with activity.
+          </div>
+
+          <div class="pair-grid">
+            <div class="pair-card grinder">
+              <div class="pair-name">Grinder</div>
+              <div class="pair-meta">
+                <span id="grinderSkill">skill 0.8</span>
+                <span id="grinderAct">act 4.0</span>
+              </div>
+            </div>
+            <div class="pair-card casual">
+              <div class="pair-name">Casual</div>
+              <div class="pair-meta">
+                <span id="casualSkill">skill 0.8</span>
+                <span id="casualAct">act 0.7</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-row">
+            <div class="metric-title">Forward PR</div>
+            <div>
+              <div class="bar-line">
+                <span class="bar-label">Grinder</span>
+                <div class="bar-track">
+                  <span id="forwardGrinderBar" class="bar-fill grinder"></span>
+                </div>
+                <span id="forwardGrinderValue" class="bar-value">0.0000</span>
+              </div>
+              <div class="bar-line">
+                <span class="bar-label">Casual</span>
+                <div class="bar-track">
+                  <span id="forwardCasualBar" class="bar-fill casual"></span>
+                </div>
+                <span id="forwardCasualValue" class="bar-value">0.0000</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-row">
+            <div class="metric-title">Reverse PR</div>
+            <div>
+              <div class="bar-line">
+                <span class="bar-label">Grinder</span>
+                <div class="bar-track">
+                  <span id="reverseGrinderBar" class="bar-fill grinder"></span>
+                </div>
+                <span id="reverseGrinderValue" class="bar-value">0.0000</span>
+              </div>
+              <div class="bar-line">
+                <span class="bar-label">Casual</span>
+                <div class="bar-track">
+                  <span id="reverseCasualBar" class="bar-fill casual"></span>
+                </div>
+                <span id="reverseCasualValue" class="bar-value">0.0000</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-row">
+            <div class="metric-title">LOOPR Score</div>
+            <div>
+              <div class="bar-line">
+                <span class="bar-label">Grinder</span>
+                <div class="bar-track split">
+                  <span id="ratioGrinderPos" class="bar-split pos"></span>
+                  <span id="ratioGrinderNeg" class="bar-split neg"></span>
+                </div>
+                <span id="ratioGrinderValue" class="bar-value">0.000</span>
+              </div>
+              <div class="bar-line">
+                <span class="bar-label">Casual</span>
+                <div class="bar-track split">
+                  <span id="ratioCasualPos" class="bar-split pos"></span>
+                  <span id="ratioCasualNeg" class="bar-split neg"></span>
+                </div>
+                <span id="ratioCasualValue" class="bar-value">0.000</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="delta-row">
+            <span>Delta forward: <strong id="deltaForward">0.0000</strong></span>
+            <span>Delta reverse: <strong id="deltaReverse">0.0000</strong></span>
+            <span>Delta LOOPR: <strong id="deltaRatio">0.000</strong></span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="note">
+            Model: expected matches ~ activity_i * activity_j. Outcomes use a logistic skill gap.
+            Scores use column-stochastic PageRank on loser->winner and its transpose, with exposure-based teleport.
+            LOOPR applies auto smoothing (lambda targets 2.5% of median win PR).
+            <div class="note-line">Field size: <span id="fieldSize">0</span></div>
+            <div class="note-line">Auto lambda: <span id="lambdaValue">0.0000</span></div>
+          </div>
+          <details id="playersDetails">
+            <summary id="playersSummary">Show all players</summary>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Skill</th>
+                    <th>Act</th>
+                    <th>Forward</th>
+                    <th>Reverse</th>
+                    <th>LOOPR</th>
+                  </tr>
+                </thead>
+                <tbody id="playersTable"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const isEmbedded = (() => {
+          try {
+            return window.self !== window.top;
+          } catch (err) {
+            return true;
+          }
+        })();
+
+        if (isEmbedded) {
+          document.documentElement.classList.add("is-embedded");
+        }
+
+        const actSlider = document.getElementById("actSlider");
+        const skillSlider = document.getElementById("skillSlider");
+        const actValue = document.getElementById("actValue");
+        const skillValue = document.getElementById("skillValue");
+        const btnReset = document.getElementById("btnReset");
+        const statusEl = document.getElementById("status");
+        const lambdaValue = document.getElementById("lambdaValue");
+        const fieldSize = document.getElementById("fieldSize");
+        const playersSummary = document.getElementById("playersSummary");
+        const playersDetails = document.getElementById("playersDetails");
+
+        const grinderSkillEl = document.getElementById("grinderSkill");
+        const grinderActEl = document.getElementById("grinderAct");
+        const casualSkillEl = document.getElementById("casualSkill");
+        const casualActEl = document.getElementById("casualAct");
+
+        const forwardGrinderBar = document.getElementById("forwardGrinderBar");
+        const forwardCasualBar = document.getElementById("forwardCasualBar");
+        const reverseGrinderBar = document.getElementById("reverseGrinderBar");
+        const reverseCasualBar = document.getElementById("reverseCasualBar");
+        const ratioGrinderPos = document.getElementById("ratioGrinderPos");
+        const ratioGrinderNeg = document.getElementById("ratioGrinderNeg");
+        const ratioCasualPos = document.getElementById("ratioCasualPos");
+        const ratioCasualNeg = document.getElementById("ratioCasualNeg");
+
+        const forwardGrinderValue = document.getElementById("forwardGrinderValue");
+        const forwardCasualValue = document.getElementById("forwardCasualValue");
+        const reverseGrinderValue = document.getElementById("reverseGrinderValue");
+        const reverseCasualValue = document.getElementById("reverseCasualValue");
+        const ratioGrinderValue = document.getElementById("ratioGrinderValue");
+        const ratioCasualValue = document.getElementById("ratioCasualValue");
+
+        const deltaForward = document.getElementById("deltaForward");
+        const deltaReverse = document.getElementById("deltaReverse");
+        const deltaRatio = document.getElementById("deltaRatio");
+        const playersTable = document.getElementById("playersTable");
+
+        const baseConfig = {
+          scale: 6.0,
+          tau: 0.9,
+          damping: 0.85,
+          maxIter: 200,
+          tol: 1e-10,
+        };
+        // Larger field keeps opponent mix stable as Grinder's activity changes.
+        const backgroundCount = 200;
+        const backgroundSeed = 1337;
+
+        function makeRng(seed) {
+          let state = seed >>> 0;
+          return () => {
+            state = (state * 1664525 + 1013904223) >>> 0;
+            return state / 4294967295;
+          };
+        }
+
+        function makeBackgroundPlayers(count, seed) {
+          const rng = makeRng(seed);
+          const players = [];
+          for (let i = 0; i < count; i++) {
+            const r1 = rng();
+            const r2 = rng();
+            const skillRaw = -1.2 + 3.0 * r1;
+            const skill = 0.6 + (skillRaw - 0.6) * 0.7;
+            const act = 0.5 + 1.6 * Math.pow(r2, 1.4);
+            players.push({ id: `P${i + 1}`, skill, act });
+          }
+          return players;
+        }
+
+        const backgroundPlayers = makeBackgroundPlayers(backgroundCount, backgroundSeed);
+
+        function sigmoid(x) {
+          return 1 / (1 + Math.exp(-x));
+        }
+
+        function makePlayers(opts) {
+          const grinderSkill = 0.8 + opts.grinderSkillDelta;
+          const players = [
+            { id: "Ace", skill: 2.4, act: 0.8 },
+            { id: "Pro", skill: 1.6, act: 1.2 },
+            { id: "Gate", skill: 0.9, act: 1.4 },
+            { id: "Grinder", skill: grinderSkill, act: opts.grinderAct },
+            { id: "Casual", skill: 0.8, act: 0.7 },
+            { id: "Journeyman", skill: 0.2, act: 1.6 },
+            { id: "Newbie", skill: -1.0, act: 2.0 },
+          ];
+          backgroundPlayers.forEach((player) => {
+            players.push({ ...player });
+          });
+          return players;
+        }
+
+        function buildExpectedLossGraph(players, opts) {
+          const n = players.length;
+          const W = Array.from({ length: n }, () => Array(n).fill(0));
+
+          for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+              const matches = opts.scale * players[i].act * players[j].act;
+              const p_i_wins = sigmoid((players[i].skill - players[j].skill) / opts.tau);
+              const p_j_wins = 1 - p_i_wins;
+
+              W[i][j] += matches * p_j_wins;
+              W[j][i] += matches * p_i_wins;
+            }
+          }
+          return W;
+        }
+
+        function exposureFromGraph(W) {
+          const n = W.length;
+          const exp = Array(n).fill(0);
+          for (let i = 0; i < n; i++) {
+            let s = 0;
+            for (let j = 0; j < n; j++) {
+              s += W[i][j] + W[j][i];
+            }
+            exp[i] = s;
+          }
+          return exp;
+        }
+
+        function teleportFromExposure(exp) {
+          const eps = 1e-12;
+          const weights = exp.map((x) => x + eps);
+          const total = weights.reduce((a, b) => a + b, 0);
+          if (total <= 0) {
+            return weights.map(() => 1 / weights.length);
+          }
+          return weights.map((x) => x / total);
+        }
+
+        function transpose(W) {
+          const n = W.length;
+          const WT = Array.from({ length: n }, () => Array(n).fill(0));
+          for (let i = 0; i < n; i++) {
+            for (let j = 0; j < n; j++) WT[j][i] = W[i][j];
+          }
+          return WT;
+        }
+
+        function pagerankColStochastic(A, teleport, opts) {
+          const n = A.length;
+          const alpha = opts.damping;
+          const maxIter = opts.maxIter;
+          const tol = opts.tol;
+
+          const colSums = Array(n).fill(0);
+          for (let j = 0; j < n; j++) {
+            let sum = 0;
+            for (let i = 0; i < n; i++) sum += A[i][j];
+            colSums[j] = sum;
+          }
+
+          const P = Array.from({ length: n }, () => Array(n).fill(0));
+          for (let j = 0; j < n; j++) {
+            const denom = colSums[j];
+            if (denom <= 0) continue;
+            for (let i = 0; i < n; i++) P[i][j] = A[i][j] / denom;
+          }
+
+          let r = teleport.slice();
+
+          for (let t = 0; t < maxIter; t++) {
+            const next = Array(n).fill(0);
+            let danglingMass = 0;
+
+            for (let j = 0; j < n; j++) {
+              const rj = r[j];
+              if (rj === 0) continue;
+              if (colSums[j] > 0) {
+                for (let i = 0; i < n; i++) next[i] += alpha * P[i][j] * rj;
+              } else {
+                danglingMass += rj;
+              }
+            }
+
+            for (let i = 0; i < n; i++) {
+              next[i] += (1 - alpha) * teleport[i];
+              if (danglingMass > 0) next[i] += alpha * danglingMass * teleport[i];
+            }
+
+            const total = next.reduce((a, b) => a + b, 0) || 1;
+            for (let i = 0; i < n; i++) next[i] /= total;
+
+            let delta = 0;
+            for (let i = 0; i < n; i++) delta += Math.abs(next[i] - r[i]);
+
+            r = next;
+            if (delta < tol) break;
+          }
+
+          return r;
+        }
+
+        function median(values) {
+          if (values.length === 0) return 0;
+          const sorted = values.slice().sort((a, b) => a - b);
+          const mid = Math.floor(sorted.length / 2);
+          if (sorted.length % 2 === 0) {
+            return (sorted[mid - 1] + sorted[mid]) / 2;
+          }
+          return sorted[mid];
+        }
+
+        function autoLambda(win, rho) {
+          const target = 0.025 * median(win);
+          const medRho = median(rho);
+          if (medRho <= 0) return 0;
+          return Math.max(target / medRho, 0);
+        }
+
+        function logOddsScore(win, loss, rho, lambdaSmooth) {
+          const eps = 1e-12;
+          return win.map((x, i) => {
+            const num = x + lambdaSmooth * rho[i] + eps;
+            const den = loss[i] + lambdaSmooth * rho[i] + eps;
+            return Math.log(num / den);
+          });
+        }
+
+        function setRangeFill(el) {
+          const min = parseFloat(el.min);
+          const max = parseFloat(el.max);
+          const val = parseFloat(el.value);
+          if (Number.isNaN(min) || Number.isNaN(max) || max === min) {
+            el.style.setProperty("--range-fill", "50%");
+            return;
+          }
+          const pct = ((val - min) / (max - min)) * 100;
+          el.style.setProperty("--range-fill", `${pct.toFixed(1)}%`);
+        }
+
+        function formatSigned(value, digits) {
+          const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+          return `${sign}${Math.abs(value).toFixed(digits)}`;
+        }
+
+        function formatSci(value, decimals = 2) {
+          if (!Number.isFinite(value)) return "nan";
+
+          const isNegative = value < 0 || Object.is(value, -0);
+          const abs = Math.abs(value);
+          const sign = isNegative ? "-" : "";
+
+          if (abs === 0) {
+            return `${sign}0.${"0".repeat(decimals)}e-0`;
+          }
+
+          let exp = Math.floor(Math.log10(abs));
+          let mantissa = abs / Math.pow(10, exp);
+
+          const factor = Math.pow(10, decimals);
+          mantissa = Math.round(mantissa * factor) / factor;
+
+          if (mantissa >= 10) {
+            mantissa /= 10;
+            exp += 1;
+          }
+
+          const expStr = exp === 0 ? "-0" : exp < 0 ? `${exp}` : `+${exp}`;
+          return `${sign}${mantissa.toFixed(decimals)}e${expStr}`;
+        }
+
+        function formatSciSigned(value, decimals = 2) {
+          const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+          return `${sign}${formatSci(Math.abs(value), decimals)}`;
+        }
+
+        function updateBars(forward, reverse, ratio, grinderIdx, casualIdx) {
+          const fG = forward[grinderIdx];
+          const fC = forward[casualIdx];
+          const rG = reverse[grinderIdx];
+          const rC = reverse[casualIdx];
+          const dG = ratio[grinderIdx];
+          const dC = ratio[casualIdx];
+
+          const maxForward = Math.max(fG, fC, 1e-6);
+          const maxReverse = Math.max(rG, rC, 1e-6);
+          const maxRatio = Math.max(Math.abs(dG), Math.abs(dC), 1e-6);
+
+          forwardGrinderBar.style.width = `${(fG / maxForward) * 100}%`;
+          forwardCasualBar.style.width = `${(fC / maxForward) * 100}%`;
+          reverseGrinderBar.style.width = `${(rG / maxReverse) * 100}%`;
+          reverseCasualBar.style.width = `${(rC / maxReverse) * 100}%`;
+
+          ratioGrinderPos.style.width = dG > 0 ? `${(Math.abs(dG) / maxRatio) * 100}%` : "0%";
+          ratioGrinderNeg.style.width = dG < 0 ? `${(Math.abs(dG) / maxRatio) * 100}%` : "0%";
+          ratioCasualPos.style.width = dC > 0 ? `${(Math.abs(dC) / maxRatio) * 100}%` : "0%";
+          ratioCasualNeg.style.width = dC < 0 ? `${(Math.abs(dC) / maxRatio) * 100}%` : "0%";
+
+          forwardGrinderValue.textContent = formatSci(fG);
+          forwardCasualValue.textContent = formatSci(fC);
+          reverseGrinderValue.textContent = formatSci(rG);
+          reverseCasualValue.textContent = formatSci(rC);
+          ratioGrinderValue.textContent = formatSci(dG);
+          ratioCasualValue.textContent = formatSci(dC);
+
+          deltaForward.textContent = formatSciSigned(fG - fC);
+          deltaReverse.textContent = formatSciSigned(rG - rC);
+          deltaRatio.textContent = formatSciSigned(dG - dC);
+        }
+
+        function renderTable(players, forward, reverse, ratio) {
+          playersTable.innerHTML = "";
+          players.forEach((player, idx) => {
+            const row = document.createElement("tr");
+            if (player.id === "Grinder") row.classList.add("highlight");
+            if (player.id === "Casual") row.classList.add("highlight", "casual");
+
+            const cells = [
+              player.id,
+              player.skill.toFixed(2),
+              player.act.toFixed(2),
+              formatSci(forward[idx]),
+              formatSci(reverse[idx]),
+              formatSci(ratio[idx]),
+            ];
+
+            cells.forEach((text, cellIdx) => {
+              const td = document.createElement("td");
+              td.textContent = text;
+              if (cellIdx === 0) td.style.textAlign = "left";
+              row.appendChild(td);
+            });
+            playersTable.appendChild(row);
+          });
+        }
+
+        function updateStatus(skillDelta) {
+          if (Math.abs(skillDelta) < 0.05) {
+            statusEl.textContent = "Equal skills: production LOOPR still shifts with activity.";
+          } else if (skillDelta > 0) {
+            statusEl.textContent = "Grinder is stronger: LOOPR moves positive with skill + activity.";
+          } else {
+            statusEl.textContent = "Grinder is weaker: LOOPR moves negative, activity can soften it.";
+          }
+        }
+
+        function update() {
+          const grinderAct = parseFloat(actSlider.value);
+          const grinderSkillDelta = parseFloat(skillSlider.value);
+
+          actValue.textContent = grinderAct.toFixed(1);
+          skillValue.textContent = formatSigned(grinderSkillDelta, 1);
+
+          setRangeFill(actSlider);
+          setRangeFill(skillSlider);
+
+          const players = makePlayers({ grinderAct, grinderSkillDelta });
+          const W = buildExpectedLossGraph(players, baseConfig);
+          const exposure = exposureFromGraph(W);
+          const teleport = teleportFromExposure(exposure);
+          const A_win = transpose(W);
+          const A_loss = W;
+          const forward = pagerankColStochastic(A_win, teleport, baseConfig);
+          const reverse = pagerankColStochastic(A_loss, teleport, baseConfig);
+          const lambdaSmooth = autoLambda(forward, teleport);
+          const ratio = logOddsScore(forward, reverse, teleport, lambdaSmooth);
+
+          const grinderIdx = players.findIndex((p) => p.id === "Grinder");
+          const casualIdx = players.findIndex((p) => p.id === "Casual");
+
+          grinderSkillEl.textContent = `skill ${(0.8 + grinderSkillDelta).toFixed(1)}`;
+          grinderActEl.textContent = `act ${grinderAct.toFixed(1)}`;
+          casualSkillEl.textContent = "skill 0.8";
+          casualActEl.textContent = "act 0.7";
+
+          lambdaValue.textContent = formatSci(lambdaSmooth);
+          fieldSize.textContent = `${players.length}`;
+          playersSummary.textContent = `Show all players (${players.length})`;
+          updateBars(forward, reverse, ratio, grinderIdx, casualIdx);
+          if (playersDetails.open) {
+            renderTable(players, forward, reverse, ratio);
+          }
+          updateStatus(grinderSkillDelta);
+        }
+
+        actSlider.addEventListener("input", update);
+        skillSlider.addEventListener("input", update);
+        playersDetails.addEventListener("toggle", () => {
+          if (playersDetails.open) update();
+        });
+        btnReset.addEventListener("click", () => {
+          actSlider.value = "4.0";
+          skillSlider.value = "0.0";
+          update();
+        });
+
+        update();
+      })();
+    </script>
+  </body>
+</html>

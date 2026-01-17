@@ -124,7 +124,8 @@
       button:hover { background: rgba(255,255,255,0.10); }
       button:active { transform: translateY(1px); }
 
-      .speed {
+      .speed,
+      .teleport {
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -442,7 +443,8 @@
           border-radius: 12px;
         }
 
-        .speed {
+        .speed,
+        .teleport {
           grid-column: 1 / -1;
           justify-content: space-between;
           width: 100%;
@@ -484,6 +486,11 @@
             Speed
             <input id="speed" type="range" min="0.6" max="2.4" step="0.1" value="1.2" />
             <span id="speedLabel">1.2x</span>
+          </span>
+          <span class="teleport">
+            Teleport gamma
+            <input id="gamma" type="range" min="0" max="1" step="0.05" value="0" />
+            <span id="gammaLabel">0.00</span>
           </span>
         </div>
 
@@ -563,6 +570,8 @@
         const btnReset = document.getElementById("btnReset");
         const speedInput = document.getElementById("speed");
         const speedLabel = document.getElementById("speedLabel");
+        const gammaInput = document.getElementById("gamma");
+        const gammaLabel = document.getElementById("gammaLabel");
 
         const appletEl = document.querySelector(".applet");
         const svg = document.querySelector("svg");
@@ -588,6 +597,7 @@
           damping: 0.85,
           maxIters: 40,
           topK: 2,
+          gamma: 0.0,
         };
 
         function sigmoid(x) {
@@ -613,6 +623,26 @@
           return W;
         }
 
+        function exposureFromGraph(W) {
+          const n = W.length;
+          const exp = Array(n).fill(0);
+          for (let i = 0; i < n; i++) {
+            let s = 0;
+            for (let j = 0; j < n; j++) {
+              s += W[i][j] + W[j][i];
+            }
+            exp[i] = s;
+          }
+          return exp;
+        }
+
+        function teleportFromExposure(exp, gamma) {
+          const eps = 1e-12;
+          const weights = exp.map((x) => Math.pow(x + eps, gamma));
+          const Z = weights.reduce((a, b) => a + b, 0) || 1;
+          return weights.map((x) => x / Z);
+        }
+
         function transpose(W) {
           const n = W.length;
           const WT = Array.from({ length: n }, () => Array(n).fill(0));
@@ -622,7 +652,7 @@
           return WT;
         }
 
-        function rowNormalize(W) {
+        function rowNormalize(W, teleport) {
           const n = W.length;
           const P = Array.from({ length: n }, () => Array(n).fill(0));
           for (let i = 0; i < n; i++) {
@@ -630,8 +660,7 @@
             if (s > 0) {
               for (let j = 0; j < n; j++) P[i][j] = W[i][j] / s;
             } else {
-              const u = 1 / n;
-              for (let j = 0; j < n; j++) P[i][j] = u;
+              for (let j = 0; j < n; j++) P[i][j] = teleport[j];
             }
           }
           return P;
@@ -715,30 +744,44 @@
           statusEl.textContent = msg;
         }
 
-        function setRangeFill() {
-          const min = parseFloat(speedInput.min);
-          const max = parseFloat(speedInput.max);
-          const val = parseFloat(speedInput.value);
+        function setRangeFill(inputEl) {
+          const min = parseFloat(inputEl.min);
+          const max = parseFloat(inputEl.max);
+          const val = parseFloat(inputEl.value);
           if (Number.isNaN(min) || Number.isNaN(max) || max === min) {
-            speedInput.style.setProperty("--range-fill", "50%");
+            inputEl.style.setProperty("--range-fill", "50%");
             return;
           }
           const pct = ((val - min) / (max - min)) * 100;
-          speedInput.style.setProperty("--range-fill", `${pct.toFixed(1)}%`);
+          inputEl.style.setProperty("--range-fill", `${pct.toFixed(1)}%`);
         }
 
         function setSpeedLabel() {
           const s = parseFloat(speedInput.value);
           speedLabel.textContent = `${s.toFixed(1)}x`;
-          setRangeFill();
+          setRangeFill(speedInput);
           return s;
+        }
+
+        function setGammaLabel() {
+          const g = parseFloat(gammaInput.value);
+          gammaLabel.textContent = g.toFixed(2);
+          setRangeFill(gammaInput);
+          return g;
         }
 
         const W = buildExpectedLossGraph(players, config);
         const WT = transpose(W);
-        const P = rowNormalize(W);
-        const PT = rowNormalize(WT);
-        const teleport = Array(players.length).fill(1 / players.length);
+        const exposure = exposureFromGraph(W);
+        let teleport = Array(players.length).fill(1 / players.length);
+        let P = rowNormalize(W, teleport);
+        let PT = rowNormalize(WT, teleport);
+
+        function rebuildTeleport() {
+          teleport = teleportFromExposure(exposure, config.gamma);
+          P = rowNormalize(W, teleport);
+          PT = rowNormalize(WT, teleport);
+        }
 
         const edges = buildTopEdges(W, config.topK);
         const maxEdge = edges.reduce((m, e) => Math.max(m, e.w), 0) || 1;
@@ -945,7 +988,9 @@
           renderRankList(reverseList, reverse, { barColor: "rgba(56, 189, 248, 0.85)" });
           renderRatioList(ratioList, dom);
 
-          setStatus(`Iter ${iteration}/${config.maxIters} | d ${config.damping.toFixed(2)} | tau ${config.tau.toFixed(1)}`);
+          setStatus(
+            `Iter ${iteration}/${config.maxIters} | d ${config.damping.toFixed(2)} | tau ${config.tau.toFixed(1)} | gamma ${config.gamma.toFixed(2)}`
+          );
         }
 
         async function runOneStep() {
@@ -989,6 +1034,12 @@
           updateUI();
         }
 
+        function updateGamma() {
+          config.gamma = setGammaLabel();
+          rebuildTeleport();
+          reset();
+        }
+
         function handleResize(widthPx) {
           const next = getLayoutForWidth(widthPx);
           applyLayout(next);
@@ -1013,6 +1064,7 @@
 
         buildSvgNodes();
         buildSvgEdges();
+        rebuildTeleport();
         initLayout();
 
         btnPlay.addEventListener("click", playLoop);
@@ -1020,9 +1072,11 @@
         btnStep.addEventListener("click", async () => { pause(); await runOneStep(); });
         btnReset.addEventListener("click", reset);
         speedInput.addEventListener("input", () => setSpeedLabel());
+        gammaInput.addEventListener("input", updateGamma);
 
         reset();
         setSpeedLabel();
+        setGammaLabel();
       })();
     </script>
   </body>
