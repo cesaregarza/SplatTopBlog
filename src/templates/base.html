@@ -8,6 +8,10 @@
     <meta name="description" content="{% block description %}{{ page.search_description }}{% endblock %}">
 
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css"
+    >
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -32,6 +36,34 @@
         </footer>
     </div>
 
+    <script
+        defer
+        src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"
+    ></script>
+    <script
+        defer
+        src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"
+    ></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!window.renderMathInElement) return;
+
+            const containers = document.querySelectorAll(".post-content");
+            const targets = containers.length ? containers : [document.body];
+
+            targets.forEach((el) => {
+                window.renderMathInElement(el, {
+                    delimiters: [
+                        { left: "$$", right: "$$", display: true },
+                        { left: "\\\\[", right: "\\\\]", display: true },
+                        { left: "\\\\(", right: "\\\\)", display: false },
+                        { left: "$", right: "$", display: false },
+                    ],
+                    throwOnError: false,
+                });
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
