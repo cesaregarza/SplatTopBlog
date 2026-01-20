@@ -48,18 +48,33 @@
         document.addEventListener("DOMContentLoaded", () => {
             if (!window.renderMathInElement) return;
 
+            const options = {
+                delimiters: [
+                    { left: "[latex]", right: "[/latex]", display: true },
+                    { left: "$$", right: "$$", display: true },
+                    { left: "\\\\[", right: "\\\\]", display: true },
+                    { left: "\\\\(", right: "\\\\)", display: false },
+                    { left: "$", right: "$", display: false },
+                ],
+                throwOnError: false,
+            };
+
+            const renderTarget = (el) => {
+                window.renderMathInElement(el, options);
+            };
+
             const containers = document.querySelectorAll(".post-content");
             const targets = containers.length ? containers : [document.body];
 
             targets.forEach((el) => {
-                window.renderMathInElement(el, {
-                    delimiters: [
-                        { left: "$$", right: "$$", display: true },
-                        { left: "\\\\[", right: "\\\\]", display: true },
-                        { left: "\\\\(", right: "\\\\)", display: false },
-                        { left: "$", right: "$", display: false },
-                    ],
-                    throwOnError: false,
+                renderTarget(el);
+            });
+
+            const detailsBlocks = document.querySelectorAll(".post-content details");
+            detailsBlocks.forEach((details) => {
+                details.addEventListener("toggle", () => {
+                    if (!details.open) return;
+                    renderTarget(details);
                 });
             });
         });
