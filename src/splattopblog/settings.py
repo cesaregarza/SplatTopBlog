@@ -247,6 +247,7 @@ WAGTAILMARKDOWN = {
     "allowed_styles": [],
     "extensions": [
         "extra",
+        "blog.markdown_extensions.latex",
         "codehilite",
         "tables",
         "toc",

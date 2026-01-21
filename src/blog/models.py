@@ -35,6 +35,17 @@ BASE_BLOCKS = [
 class CollapsibleBlock(blocks.StructBlock):
     """A collapsible/spoiler block that can contain any other block types."""
 
+    category = blocks.ChoiceBlock(
+        required=False,
+        default="",
+        choices=[
+            ("", "Default"),
+            ("explainer", "Explainer"),
+            ("technical", "Technical"),
+            ("extra", "Extra"),
+        ],
+        help_text="Optional category to color-code the collapsible.",
+    )
     title = blocks.CharBlock(
         required=True,
         help_text="The summary text shown when collapsed (e.g., 'Click to reveal')",

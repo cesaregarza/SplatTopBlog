@@ -624,7 +624,7 @@ pre code {
 .collapsible-block {
     margin: 1.5rem 0;
     border-radius: 12px;
-    border: 1px solid rgba(217, 70, 239, 0.2);
+    border: 1px solid var(--collapsible-accent, rgba(217, 70, 239, 0.2));
     background: rgba(15, 23, 42, 0.6);
     overflow: hidden;
 }
@@ -636,7 +636,7 @@ pre code {
     gap: 1rem;
     padding: 1rem 1.25rem;
     cursor: pointer;
-    background: rgba(217, 70, 239, 0.08);
+    background: var(--collapsible-accent-bg, rgba(217, 70, 239, 0.08));
     border-bottom: 1px solid transparent;
     transition: background 200ms ease, border-color 200ms ease;
     list-style: none;
@@ -652,16 +652,35 @@ pre code {
 }
 
 .collapsible-block__summary:hover {
-    background: rgba(217, 70, 239, 0.14);
+    background: var(--collapsible-accent-hover, rgba(217, 70, 239, 0.14));
 }
 
 .collapsible-block[open] .collapsible-block__summary {
-    border-bottom-color: rgba(217, 70, 239, 0.2);
+    border-bottom-color: var(--collapsible-accent, rgba(217, 70, 239, 0.2));
+}
+
+.collapsible-block__heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
 }
 
 .collapsible-block__title {
     font-weight: 600;
     color: var(--color-text-primary);
+}
+
+.collapsible-block__badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: var(--collapsible-badge-bg, rgba(217, 70, 239, 0.18));
+    border: 1px solid var(--collapsible-badge-border, rgba(217, 70, 239, 0.45));
+    color: var(--collapsible-badge-text, #f6e7fb);
 }
 
 .collapsible-block__icon {
@@ -675,7 +694,7 @@ pre code {
 .collapsible-block__icon::after {
     content: "";
     position: absolute;
-    background: var(--color-purple-light);
+    background: var(--collapsible-icon, var(--color-purple-light));
     border-radius: 2px;
     transition: transform 200ms ease;
 }
@@ -717,6 +736,36 @@ pre code {
 .collapsible-block .collapsible-block {
     margin: 1rem 0;
     background: rgba(15, 23, 42, 0.4);
+}
+
+.collapsible-block--explainer {
+    --collapsible-accent: rgba(56, 189, 248, 0.25);
+    --collapsible-accent-bg: rgba(56, 189, 248, 0.1);
+    --collapsible-accent-hover: rgba(56, 189, 248, 0.16);
+    --collapsible-badge-bg: rgba(56, 189, 248, 0.18);
+    --collapsible-badge-border: rgba(56, 189, 248, 0.4);
+    --collapsible-badge-text: #cffafe;
+    --collapsible-icon: rgba(56, 189, 248, 0.9);
+}
+
+.collapsible-block--technical {
+    --collapsible-accent: rgba(193, 131, 225, 0.3);
+    --collapsible-accent-bg: rgba(193, 131, 225, 0.12);
+    --collapsible-accent-hover: rgba(193, 131, 225, 0.18);
+    --collapsible-badge-bg: rgba(193, 131, 225, 0.22);
+    --collapsible-badge-border: rgba(193, 131, 225, 0.45);
+    --collapsible-badge-text: #f3e8ff;
+    --collapsible-icon: rgba(193, 131, 225, 0.9);
+}
+
+.collapsible-block--extra {
+    --collapsible-accent: rgba(236, 72, 153, 0.28);
+    --collapsible-accent-bg: rgba(236, 72, 153, 0.1);
+    --collapsible-accent-hover: rgba(236, 72, 153, 0.16);
+    --collapsible-badge-bg: rgba(236, 72, 153, 0.2);
+    --collapsible-badge-border: rgba(236, 72, 153, 0.45);
+    --collapsible-badge-text: #fde2f2;
+    --collapsible-icon: rgba(236, 72, 153, 0.9);
 }
 
 /* Animations */

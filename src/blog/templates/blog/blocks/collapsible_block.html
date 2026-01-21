@@ -1,7 +1,15 @@
 {% load wagtailcore_tags wagtailimages_tags wagtailmarkdown %}
-<details class="collapsible-block"{% if value.open_by_default %} open{% endif %}>
+{% with category=value.category %}
+<details class="collapsible-block{% if category %} collapsible-block--{{ category }}{% endif %}"{% if value.open_by_default %} open{% endif %}>
     <summary class="collapsible-block__summary">
-        <span class="collapsible-block__title">{{ value.title }}</span>
+        <span class="collapsible-block__heading">
+            <span class="collapsible-block__title">{{ value.title }}</span>
+            {% if category %}
+            <span class="collapsible-block__badge collapsible-block__badge--{{ category }}">
+                {{ category|capfirst }}
+            </span>
+            {% endif %}
+        </span>
         <span class="collapsible-block__icon" aria-hidden="true"></span>
     </summary>
     <div class="collapsible-block__content">
@@ -10,3 +18,4 @@
         {% endfor %}
     </div>
 </details>
+{% endwith %}
