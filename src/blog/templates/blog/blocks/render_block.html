@@ -11,10 +11,15 @@
 {% elif block.block_type == 'heading' %}
     <h2>{{ block.value }}</h2>
 {% elif block.block_type == 'image' %}
-    {% image block.value width-800 as img %}
-    <figure>
-        <img src="{{ img.url }}" alt="">
-    </figure>
+    {% with caption=block.value.caption %}
+        {% image block.value.image width-1200 as img %}
+        <figure class="post-image">
+            <img src="{{ img.url }}" alt="{{ caption|default:block.value.image.title }}">
+            {% if caption %}
+                <figcaption>{{ caption }}</figcaption>
+            {% endif %}
+        </figure>
+    {% endwith %}
 {% elif block.block_type == 'code' %}
     <pre><code class="language-{{ block.value.language }}">{{ block.value.code }}</code></pre>
 {% elif block.block_type == 'raw_html' %}

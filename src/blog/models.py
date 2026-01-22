@@ -20,12 +20,41 @@ class CodeBlock(blocks.StructBlock):
         label = "Code"
 
 
+class ImageBlock(blocks.StructBlock):
+    image = ImageChooserBlock(required=True)
+    caption = blocks.CharBlock(
+        required=False,
+        help_text="Optional caption shown under the image.",
+    )
+
+    def bulk_to_python(self, values):
+        normalized = []
+        for value in values:
+            if value is None or isinstance(value, dict):
+                normalized.append(value)
+            else:
+                normalized.append({"image": value, "caption": ""})
+        return super().bulk_to_python(normalized)
+
+    def to_python(self, value):
+        if value is None:
+            return super().to_python({"image": None, "caption": ""})
+        if isinstance(value, dict):
+            return super().to_python(value)
+        # Backwards-compatibility: previous ImageChooserBlock value.
+        return super().to_python({"image": value, "caption": ""})
+
+    class Meta:
+        icon = "image"
+        label = "Image"
+
+
 # Base blocks that can be used both at top-level and inside collapsible sections
 BASE_BLOCKS = [
     ("markdown", MarkdownBlock()),
     ("paragraph", blocks.RichTextBlock()),
     ("heading", blocks.CharBlock(form_classname="title")),
-    ("image", ImageChooserBlock()),
+    ("image", ImageBlock()),
     ("code", CodeBlock()),
     ("raw_html", blocks.RawHTMLBlock()),
     ("quote", blocks.TextBlock()),
