@@ -476,6 +476,41 @@ figcaption {
     text-align: center;
 }
 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.95rem;
+}
+
+.post-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.post-content table thead th {
+    text-align: left;
+    padding: 0.75rem 0.9rem;
+    color: #f3e8ff;
+    background: rgba(217, 70, 239, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-weight: 600;
+}
+
+.post-content table tbody td {
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--color-text-secondary);
+}
+
+.post-content table tbody tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
 img {
     max-width: 100%;
     height: auto;
