@@ -51,12 +51,10 @@ def _render_block(block):
         return f"## {_escape_tag_value(value)}"
 
     if block_type == "image":
-        url = getattr(getattr(value, "file", None), "url", "")
-        alt = getattr(value, "title", "") or ""
-        alt = _escape_tag_value(alt)
-        if url:
-            return f"![{alt}]({url})"
-        return ""
+        image_obj = _struct_value_get(value, "image", value)
+        title = _escape_tag_value(getattr(image_obj, "title", "") or "")
+        caption = _escape_tag_value(_struct_value_get(value, "caption", "") or "")
+        return f"[Image; Title={title}; Caption={caption}]"
 
     if block_type == "code":
         language = _struct_value_get(value, "language", "") or ""
