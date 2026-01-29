@@ -279,18 +279,30 @@
         progressEl.style.width = `${(progress * 100).toFixed(2)}%`;
       };
 
+      const isHeadingVisible = (heading) => {
+        if (!heading) return false;
+        if (heading.closest("details:not([open])")) return false;
+        if (heading.offsetParent === null) return false;
+        if (heading.getClientRects().length === 0) return false;
+        return true;
+      };
+
       const onScroll = () => {
         if (ticking) return;
         ticking = true;
         window.requestAnimationFrame(() => {
           const fromTop = window.scrollY + 140;
-          let current = headings[0];
+          let current = null;
           for (const heading of headings) {
+            if (!isHeadingVisible(heading)) continue;
             if (heading.offsetTop <= fromTop) {
               current = heading;
-            } else {
+            } else if (current) {
               break;
             }
+          }
+          if (!current) {
+            current = headings.find(isHeadingVisible) || headings[0];
           }
           if (current) updateActive(current.id);
           updateProgress();
@@ -299,6 +311,12 @@
       };
 
       window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("load", onScroll);
+      const resizeObserver = "ResizeObserver" in window ? new ResizeObserver(onScroll) : null;
+      if (resizeObserver) resizeObserver.observe(content);
+      content.querySelectorAll("details.collapsible-block").forEach((details) => {
+        details.addEventListener("toggle", onScroll);
+      });
       const handleResize = () => {
         onScroll();
         if (window.matchMedia("(min-width: 1100px)").matches) {
