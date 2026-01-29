@@ -11,6 +11,11 @@
                     <time datetime="{{ page.date|date:'Y-m-d' }}">{{ page.date }}</time>
                 </p>
             {% endif %}
+            <div class="post-readtime" id="postReadTime" aria-live="polite">
+                <span class="post-readtime__main">Main path: -- min</span>
+                <span class="post-readtime__divider">•</span>
+                <span class="post-readtime__deep">With deep dives: -- min</span>
+            </div>
         </header>
 
         {% if page.featured_image %}
@@ -70,6 +75,7 @@
         window.addEventListener("resize", setScrollOffset);
 
         const content = document.querySelector(".post-content");
+        const readTimeEl = document.getElementById("postReadTime");
         const tocList = document.getElementById("postTocList");
         const crumbEl = document.getElementById("postTocCrumb");
         const toc = document.querySelector(".post-toc");
@@ -77,6 +83,103 @@
         const drawerToggle = document.getElementById("postTocDrawerToggle");
         const backdrop = document.getElementById("postTocBackdrop");
         if (!content || !tocList || !crumbEl || !toc) return;
+
+        const wordRegex = /[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g;
+        const countWordsInString = (text) => (text.match(wordRegex) || []).length;
+        const mathCharsPerWord = 8;
+
+        const countMathWords = (el) => {
+            const annotations = el.querySelectorAll("annotation[encoding='application/x-tex']");
+            let tex = "";
+            annotations.forEach((node) => {
+                if (node.textContent) tex += ` ${node.textContent}`;
+            });
+            if (!tex) {
+                tex = el.textContent || "";
+            }
+            const compact = tex.replace(/\s+/g, "");
+            if (!compact) return 0;
+            return Math.max(1, Math.ceil(compact.length / mathCharsPerWord));
+        };
+
+        const countTableWords = (table) => {
+            let total = 0;
+            table.querySelectorAll("th, td").forEach((cell) => {
+                const text = (cell.textContent || "").trim();
+                const words = countWordsInString(text);
+                if (words === 0 && text.length > 0) {
+                    total += 1;
+                } else {
+                    total += words;
+                }
+            });
+            return total;
+        };
+
+        const countNode = (node, options) => {
+            if (!node) return 0;
+            if (node.nodeType === Node.TEXT_NODE) {
+                return countWordsInString(node.textContent || "");
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+                return 0;
+            }
+
+            const el = node;
+            if (
+                el.matches("script, style, nav") ||
+                el.classList.contains("para-anchor") ||
+                el.classList.contains("post-toc") ||
+                el.classList.contains("post-sidebar")
+            ) {
+                return 0;
+            }
+
+            if (el.classList.contains("katex") || el.classList.contains("katex-display") || el.classList.contains("latex-block")) {
+                return countMathWords(el);
+            }
+
+            if (el.tagName === "TABLE") {
+                return countTableWords(el);
+            }
+
+            if (el.tagName === "DETAILS" && el.classList.contains("collapsible-block")) {
+                let total = 0;
+                const summary = el.querySelector(":scope > summary");
+                if (summary) {
+                    total += countNode(summary, options);
+                }
+                const includeContent = options.includeClosed || el.hasAttribute("open");
+                if (includeContent) {
+                    Array.from(el.children).forEach((child) => {
+                        if (summary && child === summary) return;
+                        total += countNode(child, options);
+                    });
+                }
+                return total;
+            }
+
+            let sum = 0;
+            el.childNodes.forEach((child) => {
+                sum += countNode(child, options);
+            });
+            return sum;
+        };
+
+        const formatMinutes = (words) => {
+            const wordsPerMinute = 220;
+            const minutes = Math.max(1, Math.round(words / wordsPerMinute));
+            return `${minutes} min`;
+        };
+
+        if (readTimeEl) {
+            const mainWords = countNode(content, { includeClosed: false });
+            const deepWords = countNode(content, { includeClosed: true });
+            const mainEl = readTimeEl.querySelector(".post-readtime__main");
+            const deepEl = readTimeEl.querySelector(".post-readtime__deep");
+            if (mainEl) mainEl.textContent = `Main path: ${formatMinutes(mainWords)}`;
+            if (deepEl) deepEl.textContent = `With deep dives: ${formatMinutes(deepWords)}`;
+        }
 
         const anchorSlugCounts = new Map();
         const slugify = (text, prefix = "") => {
