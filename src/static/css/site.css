@@ -1084,6 +1084,13 @@ pre code {
     color: var(--color-text-primary);
 }
 
+.collapsible-block__readtime {
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
 .collapsible-block__badge {
     font-size: 0.72rem;
     font-weight: 600;

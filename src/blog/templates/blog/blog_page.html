@@ -87,6 +87,7 @@
         const wordRegex = /[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g;
         const countWordsInString = (text) => (text.match(wordRegex) || []).length;
         const mathCharsPerWord = 8;
+        const wordsPerMinute = 220;
 
         const countMathWords = (el) => {
             const annotations = el.querySelectorAll("annotation[encoding='application/x-tex']");
@@ -169,7 +170,6 @@
         };
 
         const formatMinutes = (words) => {
-            const wordsPerMinute = 220;
             const minutes = Math.max(1, Math.round(words / wordsPerMinute));
             return `${minutes} min`;
         };
@@ -182,6 +182,20 @@
             if (mainEl) mainEl.textContent = `Main path: ${formatMinutes(mainWords)}`;
             if (deepEl) deepEl.textContent = `With deep dives: ${formatMinutes(deepWords)}`;
         }
+
+        const updateCollapsibleReadTimes = () => {
+            const summaries = content.querySelectorAll(".collapsible-block__summary");
+            summaries.forEach((summary) => {
+                const details = summary.closest("details");
+                if (!details) return;
+                const contentEl = details.querySelector(".collapsible-block__content");
+                if (!contentEl) return;
+                const words = countNode(contentEl, { includeClosed: true });
+                const minutes = Math.max(1, Math.round(words / wordsPerMinute));
+                const label = summary.querySelector("[data-collapsible-readtime]");
+                if (label) label.textContent = `${minutes} min`;
+            });
+        };
 
         const glossaryTerms = new Map();
         let glossaryAutoLink = false;
@@ -405,6 +419,7 @@
         };
 
         bindGlossaryTerms();
+        updateCollapsibleReadTimes();
 
         const anchorSlugCounts = new Map();
         const slugify = (text, prefix = "") => {
