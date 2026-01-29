@@ -713,6 +713,7 @@ h1, h2, h3, h4 {
 }
 
 .post-content p,
+.post-content h1,
 .post-content h2,
 .post-content h3,
 .post-content h4,
@@ -922,6 +923,7 @@ h1, h2, h3, h4 {
 }
 
 .post-content p:hover .para-anchor,
+.post-content h1:hover .para-anchor,
 .post-content h2:hover .para-anchor,
 .post-content h3:hover .para-anchor,
 .post-content h4:hover .para-anchor,
