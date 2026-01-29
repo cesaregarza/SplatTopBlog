@@ -420,6 +420,9 @@ h1, h2, h3, h4 {
     background: rgba(15, 23, 42, 0.7);
     padding: 1.25rem 1.25rem 1.4rem;
     box-shadow: var(--shadow-panel);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - var(--site-header-offset, 120px) - 32px);
 }
 
 .post-toc__progress {
@@ -466,6 +469,13 @@ h1, h2, h3, h4 {
     margin-bottom: 0.75rem;
 }
 
+.post-toc__nav {
+    overflow-y: auto;
+    padding-right: 0.2rem;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 .post-toc__list {
     list-style: none;
     padding: 0;
@@ -474,8 +484,16 @@ h1, h2, h3, h4 {
     gap: 0.4rem;
 }
 
-.post-toc__item--sub {
+.post-toc__item--h2 {
     padding-left: 0.7rem;
+}
+
+.post-toc__item--h3 {
+    padding-left: 1.4rem;
+}
+
+.post-toc__item.is-hidden {
+    display: none;
 }
 
 .post-toc__link {
@@ -508,6 +526,15 @@ h1, h2, h3, h4 {
 
 .post-toc--compact .post-toc__header {
     margin-bottom: 0;
+}
+
+.post-toc--condensed .post-toc__item--sub {
+    display: none;
+}
+
+.post-toc--condensed .post-toc__item--sub.is-active,
+.post-toc--condensed .post-toc__item--sub.is-parent-active {
+    display: block;
 }
 
 .post-toc-drawer-toggle {

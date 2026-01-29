@@ -100,7 +100,7 @@
     };
 
     content.querySelectorAll("p").forEach((p) => addAnchor(p, "p"));
-    content.querySelectorAll("h2, h3, h4, h5, h6").forEach((heading) => addAnchor(heading, "h"));
+    content.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((heading) => addAnchor(heading, "h"));
     content.querySelectorAll(".collapsible-block__summary").forEach((summary) => {
       const titleEl = summary.querySelector(".collapsible-block__title");
       const text = titleEl ? titleEl.textContent.trim() : summary.textContent.trim();
@@ -108,7 +108,7 @@
       addAnchor(summary, "c", "", text);
     });
 
-    const headings = Array.from(content.querySelectorAll("h2, h3"));
+    const headings = Array.from(content.querySelectorAll("h1, h2, h3"));
 
     if (headings.length === 0) {
       const sidebar = toc ? toc.closest(".post-sidebar") : null;
@@ -116,7 +116,11 @@
       if (drawerToggle) drawerToggle.style.display = "none";
     } else if (tocList && crumbEl && toc) {
       const headingMeta = [];
+      let currentH1 = "";
+      let currentH1Id = "";
       let currentH2 = "";
+      let currentH2Id = "";
+      let firstH1Id = "";
 
       headings.forEach((heading) => {
         const text = heading.textContent.trim();
@@ -125,29 +129,49 @@
           heading.id = `h-${base}`;
         }
         const level = heading.tagName.toLowerCase();
+        if (level === "h1") {
+          currentH1 = text;
+          currentH1Id = heading.id;
+          currentH2 = "";
+          currentH2Id = "";
+          if (!firstH1Id) firstH1Id = heading.id;
+        }
         if (level === "h2") {
           currentH2 = text;
+          currentH2Id = heading.id;
         }
         headingMeta.push({
           id: heading.id,
           text,
           level,
-          parent: level === "h3" ? currentH2 : "",
+          parent: level === "h2" ? currentH1 : level === "h3" ? currentH2 : "",
+          parentId: level === "h2" ? currentH1Id : level === "h3" ? currentH2Id : "",
+          grandparentId: level === "h3" ? currentH1Id : "",
         });
       });
+
+      const itemRefs = [];
+
+      const hasH1 = headingMeta.some((entry) => entry.level === "h1");
 
       headingMeta.forEach((meta) => {
         const li = document.createElement("li");
         li.className = "post-toc__item";
-        if (meta.level === "h3") {
-          li.classList.add("post-toc__item--sub");
-        }
+        li.classList.add(`post-toc__item--${meta.level}`);
+        li.dataset.level = meta.level;
+        itemRefs.push(li);
 
         const link = document.createElement("a");
         link.className = "post-toc__link";
         link.href = `#${meta.id}`;
         link.textContent = meta.text || meta.id;
         link.dataset.tocId = meta.id;
+        if (meta.parentId) {
+          link.dataset.parentId = meta.parentId;
+        }
+        if (meta.grandparentId) {
+          link.dataset.grandparentId = meta.grandparentId;
+        }
         li.appendChild(link);
         tocList.appendChild(li);
       });
@@ -197,16 +221,50 @@
       });
 
       const updateActive = (id) => {
+        let activeH1Id = firstH1Id;
+        let activeH2Id = "";
         links.forEach((link) => {
-          link.classList.toggle("is-active", link.dataset.tocId === id);
+          const isActive = link.dataset.tocId === id;
+          link.classList.toggle("is-active", isActive);
+          const item = link.closest(".post-toc__item");
+          if (item) item.classList.toggle("is-active", isActive);
         });
         const meta = headingMeta.find((entry) => entry.id === id);
         if (!meta) return;
-        if (meta.level === "h3" && meta.parent) {
-          crumbEl.textContent = `${meta.parent} → ${meta.text}`;
-        } else {
+        if (meta.level === "h1") {
           crumbEl.textContent = meta.text;
+          activeH1Id = meta.id;
+          activeH2Id = "";
+        } else if (meta.level === "h2") {
+          crumbEl.textContent = meta.parent ? `${meta.parent} → ${meta.text}` : meta.text;
+          activeH1Id = meta.parentId;
+          activeH2Id = meta.id;
+        } else {
+          crumbEl.textContent = meta.parent ? `${meta.parent} → ${meta.text}` : meta.text;
+          activeH1Id = meta.grandparentId || meta.parentId || firstH1Id;
+          activeH2Id = meta.parentId;
         }
+
+        itemRefs.forEach((item) => {
+          const level = item.dataset.level;
+          if (level === "h1") {
+            item.classList.remove("is-hidden");
+            return;
+          }
+          if (level === "h2") {
+            const parentId = item.querySelector(".post-toc__link")?.dataset.parentId;
+            if (hasH1) {
+              item.classList.toggle("is-hidden", parentId !== activeH1Id);
+            } else {
+              item.classList.remove("is-hidden");
+            }
+            return;
+          }
+          if (level === "h3") {
+            const parentId = item.querySelector(".post-toc__link")?.dataset.parentId;
+            item.classList.toggle("is-hidden", parentId !== activeH2Id);
+          }
+        });
       };
 
       let ticking = false;
