@@ -26,6 +26,8 @@
     {{ block.value }}
 {% elif block.block_type == 'quote' %}
     <blockquote>{{ block.value }}</blockquote>
+{% elif block.block_type == 'glossary' %}
+    {% include "blog/blocks/glossary_block.html" with value=block.value %}
 {% elif block.block_type == 'collapsible' %}
     {% include "blog/blocks/collapsible_block.html" with value=block.value %}
 {% endif %}

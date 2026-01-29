@@ -70,6 +70,28 @@ def _render_block(block):
             return ""
         return "\n".join(f"> {line}" if line else ">" for line in text.splitlines())
 
+    if block_type == "glossary":
+        terms = _struct_value_get(value, "terms", []) or []
+        auto_link = _struct_value_get(value, "auto_link", False)
+        show_list = _struct_value_get(value, "show_list", False)
+        header = (
+            "[Glossary; auto_link="
+            f"{'true' if auto_link else 'false'}; show_list={'true' if show_list else 'false'}]"
+        )
+        lines = [header]
+        for entry in terms:
+            term = _escape_tag_value(_struct_value_get(entry, "term", ""))
+            definition = _escape_tag_value(_struct_value_get(entry, "definition", ""))
+            aliases = _escape_tag_value(_struct_value_get(entry, "aliases", ""))
+            if not term and not definition:
+                continue
+            if aliases:
+                lines.append(f"- {term} ({aliases}): {definition}")
+            else:
+                lines.append(f"- {term}: {definition}")
+        lines.append("[/Glossary]")
+        return "\n".join(lines)
+
     if block_type == "collapsible":
         title = _escape_tag_value(_struct_value_get(value, "title", ""))
         category = _struct_value_get(value, "category", "") or "default"

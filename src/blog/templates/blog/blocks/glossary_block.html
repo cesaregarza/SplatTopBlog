@@ -1,0 +1,25 @@
+{% load wagtailcore_tags wagtailimages_tags wagtailmarkdown %}
+{% if value.terms %}
+    <div class="glossary-data" data-auto="{{ value.auto_link|yesno:'true,false' }}">
+        {% for entry in value.terms %}
+            <span
+                class="glossary-data__entry"
+                data-term="{{ entry.term|escape }}"
+                data-definition="{{ entry.definition|escape }}"
+                data-aliases="{{ entry.aliases|default:''|escape }}"
+            ></span>
+        {% endfor %}
+    </div>
+
+    {% if value.show_list %}
+        <section class="glossary-list">
+            <h3>Glossary</h3>
+            <dl>
+                {% for entry in value.terms %}
+                    <dt>{{ entry.term }}</dt>
+                    <dd>{{ entry.definition }}</dd>
+                {% endfor %}
+            </dl>
+        </section>
+    {% endif %}
+{% endif %}

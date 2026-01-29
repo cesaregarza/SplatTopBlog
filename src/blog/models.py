@@ -49,6 +49,37 @@ class ImageBlock(blocks.StructBlock):
         label = "Image"
 
 
+class GlossaryTermBlock(blocks.StructBlock):
+    term = blocks.CharBlock(required=True)
+    definition = blocks.TextBlock(required=True)
+    aliases = blocks.CharBlock(
+        required=False,
+        help_text="Optional aliases (comma-separated).",
+    )
+
+    class Meta:
+        icon = "help"
+        label = "Glossary Term"
+
+
+class GlossaryBlock(blocks.StructBlock):
+    terms = blocks.ListBlock(GlossaryTermBlock(), help_text="Glossary terms for this post.")
+    auto_link = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Auto-link matching terms in the post body.",
+    )
+    show_list = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Show a glossary list at this position.",
+    )
+
+    class Meta:
+        icon = "list-ul"
+        label = "Glossary"
+
+
 # Base blocks that can be used both at top-level and inside collapsible sections
 BASE_BLOCKS = [
     ("markdown", MarkdownBlock()),
@@ -58,6 +89,7 @@ BASE_BLOCKS = [
     ("code", CodeBlock()),
     ("raw_html", blocks.RawHTMLBlock()),
     ("quote", blocks.TextBlock()),
+    ("glossary", GlossaryBlock()),
 ]
 
 
