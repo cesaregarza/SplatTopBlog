@@ -469,7 +469,7 @@
 
         const isInteractive = (node) => node.closest("a, button, .glossary-term");
 
-        const manualPattern = /\\[\\[([^\\]]+)\\]\\]/g;
+        const manualPattern = /\[\[([^\]]+)\]\]/g;
         const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
 
         const makeButton = (displayText, key) => {
