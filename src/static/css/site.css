@@ -659,17 +659,58 @@ h1, h2, h3, h4 {
     z-index: 1;
 }
 
-.post-content h2,
-.post-content h3,
-.post-content h4 {
-    scroll-margin-top: var(--site-header-offset, 120px);
-}
-
 .content p, .markdown-content p, .rich-text p {
     margin-bottom: 1.25rem;
     color: var(--color-text-secondary);
     font-size: 1.05rem;
     line-height: 1.8;
+}
+
+.post-content p,
+.post-content h2,
+.post-content h3,
+.post-content h4,
+.post-content h5,
+.post-content h6,
+.post-content .collapsible-block__summary {
+    position: relative;
+    scroll-margin-top: var(--site-header-offset, 120px);
+}
+
+.post-content .para-anchor {
+    position: absolute;
+    left: -1.4rem;
+    top: 0.2rem;
+    font-size: 0.85rem;
+    color: rgba(217, 70, 239, 0.6);
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity 120ms ease, color 120ms ease;
+}
+
+.post-content .para-anchor::before {
+    content: "¶";
+}
+
+.post-content .para-anchor:hover {
+    color: rgba(244, 114, 182, 0.95);
+}
+
+.post-content p:hover .para-anchor,
+.post-content h2:hover .para-anchor,
+.post-content h3:hover .para-anchor,
+.post-content h4:hover .para-anchor,
+.post-content h5:hover .para-anchor,
+.post-content h6:hover .para-anchor,
+.post-content .collapsible-block__summary:hover .para-anchor {
+    opacity: 1;
+}
+
+@media (max-width: 700px) {
+    .post-content .para-anchor {
+        left: -0.6rem;
+        opacity: 0.35;
+    }
 }
 
 .content ul, .content ol,

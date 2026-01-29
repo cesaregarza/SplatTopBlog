@@ -78,6 +78,60 @@
         const backdrop = document.getElementById("postTocBackdrop");
         if (!content || !tocList || !crumbEl || !toc) return;
 
+        const anchorSlugCounts = new Map();
+        const slugify = (text, prefix = "") => {
+            const base = text
+                .toLowerCase()
+                .replace(/[^a-z0-9\\s-]/g, "")
+                .trim()
+                .replace(/\\s+/g, "-");
+            const key = `${prefix}:${base}`;
+            const count = anchorSlugCounts.get(key) || 0;
+            anchorSlugCounts.set(key, count + 1);
+            const suffix = count ? `-${count + 1}` : "";
+            if (!base) {
+                return `section-${anchorSlugCounts.size}`;
+            }
+            return `${base}${suffix}`;
+        };
+
+        const addAnchor = (el, prefix, explicitId = "", textOverride = "") => {
+            if (!el || el.querySelector(".para-anchor")) return;
+            const rawText = textOverride || (el.textContent || "");
+            const text = rawText.trim();
+            if (!text && !explicitId && !el.id) return;
+            let id = el.id || explicitId;
+            if (!id) {
+                const slugSource = text.split(/\s+/).slice(0, 12).join(" ");
+                const base = slugify(slugSource, prefix);
+                id = prefix ? `${prefix}-${base}` : base;
+            }
+            el.id = id;
+            const anchor = document.createElement("a");
+            anchor.className = "para-anchor";
+            anchor.href = `#${id}`;
+            anchor.textContent = "";
+            anchor.setAttribute("aria-label", `Copy link to ${text || "section"}`);
+            anchor.addEventListener("click", () => {
+                const url = `${window.location.origin}${window.location.pathname}#${id}`;
+                navigator.clipboard?.writeText(url).catch(() => {});
+            });
+            el.prepend(anchor);
+        };
+
+        content.querySelectorAll("p").forEach((p) => {
+            addAnchor(p, "p");
+        });
+        content.querySelectorAll("h2, h3, h4, h5, h6").forEach((heading) => {
+            addAnchor(heading, "h");
+        });
+        content.querySelectorAll(".collapsible-block__summary").forEach((summary) => {
+            const titleEl = summary.querySelector(".collapsible-block__title");
+            const text = titleEl ? titleEl.textContent.trim() : summary.textContent.trim();
+            if (!text) return;
+            addAnchor(summary, "c", "", text);
+        });
+
         const headings = Array.from(
             content.querySelectorAll("h2, h3")
         );
@@ -89,25 +143,14 @@
             return;
         }
 
-        const slugCounts = new Map();
         const headingMeta = [];
         let currentH2 = "";
-
-        const slugify = (text) => {
-            const base = text
-                .toLowerCase()
-                .replace(/[^a-z0-9\\s-]/g, "")
-                .trim()
-                .replace(/\\s+/g, "-");
-            const count = slugCounts.get(base) || 0;
-            slugCounts.set(base, count + 1);
-            return count ? `${base}-${count + 1}` : base || `section-${slugCounts.size}`;
-        };
 
         headings.forEach((heading) => {
             const text = heading.textContent.trim();
             if (!heading.id) {
-                heading.id = slugify(text);
+                const base = slugify(text, "h");
+                heading.id = `h-${base}`;
             }
             const level = heading.tagName.toLowerCase();
             if (level === "h2") {
