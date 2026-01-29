@@ -27,6 +27,9 @@
 
     <aside class="post-sidebar" aria-label="Post navigation">
         <div class="post-toc">
+            <div class="post-toc__progress">
+                <span class="post-toc__progress-bar" id="postTocProgress"></span>
+            </div>
             <div class="post-toc__header">
                 <div class="post-toc__eyebrow">You are here</div>
                 <div class="post-toc__crumb" id="postTocCrumb">Loading...</div>
@@ -37,11 +40,19 @@
             </nav>
         </div>
     </aside>
+    <div class="post-toc-backdrop" id="postTocBackdrop" aria-hidden="true"></div>
 </div>
 
 <nav class="post-nav">
     <a href="{{ page.get_parent.url }}">&larr; Back to posts</a>
 </nav>
+{% endblock %}
+
+{% block header_actions %}
+<button class="post-toc-drawer-toggle" id="postTocDrawerToggle" type="button" aria-expanded="false">
+    <span class="post-toc-drawer-toggle__icon" aria-hidden="true"><span></span></span>
+    <span class="post-toc-drawer-toggle__label">Outline</span>
+</button>
 {% endblock %}
 
 {% block extra_js %}
@@ -62,6 +73,9 @@
         const tocList = document.getElementById("postTocList");
         const crumbEl = document.getElementById("postTocCrumb");
         const toc = document.querySelector(".post-toc");
+        const progressEl = document.getElementById("postTocProgress");
+        const drawerToggle = document.getElementById("postTocDrawerToggle");
+        const backdrop = document.getElementById("postTocBackdrop");
         if (!content || !tocList || !crumbEl || !toc) return;
 
         const headings = Array.from(
@@ -69,7 +83,9 @@
         );
 
         if (headings.length === 0) {
-            toc.closest(".post-sidebar").style.display = "none";
+            const sidebar = toc.closest(".post-sidebar");
+            if (sidebar) sidebar.style.display = "none";
+            if (drawerToggle) drawerToggle.style.display = "none";
             return;
         }
 
@@ -124,6 +140,48 @@
 
         const links = Array.from(tocList.querySelectorAll(".post-toc__link"));
 
+        if (headings.length <= 2) {
+            toc.classList.add("post-toc--compact");
+        }
+
+        const setScrollbarOffset = (value) => {
+            document.documentElement.style.setProperty("--scrollbar-offset", value);
+        };
+
+        const openDrawer = () => {
+            const scrollBarWidth = Math.max(
+                0,
+                window.innerWidth - document.documentElement.clientWidth
+            );
+            setScrollbarOffset(`${scrollBarWidth}px`);
+            document.body.classList.add("toc-drawer-open");
+            if (drawerToggle) drawerToggle.setAttribute("aria-expanded", "true");
+        };
+
+        const closeDrawer = () => {
+            document.body.classList.remove("toc-drawer-open");
+            setScrollbarOffset("0px");
+            if (drawerToggle) drawerToggle.setAttribute("aria-expanded", "false");
+        };
+
+        if (drawerToggle) {
+            drawerToggle.addEventListener("click", () => {
+                if (document.body.classList.contains("toc-drawer-open")) {
+                    closeDrawer();
+                } else {
+                    openDrawer();
+                }
+            });
+        }
+
+        if (backdrop) {
+            backdrop.addEventListener("click", closeDrawer);
+        }
+
+        window.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeDrawer();
+        });
+
         const updateActive = (id) => {
             links.forEach((link) => {
                 link.classList.toggle("is-active", link.dataset.tocId === id);
@@ -138,6 +196,17 @@
         };
 
         let ticking = false;
+        const updateProgress = () => {
+            if (!progressEl) return;
+            const top = content.offsetTop;
+            const height = content.offsetHeight;
+            const viewport = window.innerHeight;
+            const maxScroll = Math.max(1, height - viewport);
+            const scrollY = window.scrollY - top;
+            const progress = Math.min(1, Math.max(0, scrollY / maxScroll));
+            progressEl.style.width = `${(progress * 100).toFixed(2)}%`;
+        };
+
         const onScroll = () => {
             if (ticking) return;
             ticking = true;
@@ -152,13 +221,27 @@
                     }
                 }
                 if (current) updateActive(current.id);
+                updateProgress();
                 ticking = false;
             });
         };
 
         window.addEventListener("scroll", onScroll, { passive: true });
-        window.addEventListener("resize", onScroll);
-        onScroll();
+        const handleResize = () => {
+            onScroll();
+            if (window.matchMedia("(min-width: 1100px)").matches) {
+                closeDrawer();
+            }
+        };
+
+        window.addEventListener("resize", handleResize);
+        handleResize();
+
+        links.forEach((link) => {
+            link.addEventListener("click", () => {
+                closeDrawer();
+            });
+        });
     });
 </script>
 {% endblock %}
