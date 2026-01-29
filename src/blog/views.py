@@ -92,6 +92,12 @@ def _render_block(block):
         lines.append("[/Glossary]")
         return "\n".join(lines)
 
+    if block_type == "takeaway":
+        title = _escape_tag_value(_struct_value_get(value, "title", "") or "Key takeaway")
+        color = _escape_tag_value(_struct_value_get(value, "color", "") or "blue")
+        body = _escape_tag_value(_struct_value_get(value, "body", ""))
+        return f"[Takeaway; title={title}; color={color}] {body}"
+
     if block_type == "collapsible":
         title = _escape_tag_value(_struct_value_get(value, "title", ""))
         category = _struct_value_get(value, "category", "") or "default"

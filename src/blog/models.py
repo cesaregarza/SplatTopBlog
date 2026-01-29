@@ -80,6 +80,26 @@ class GlossaryBlock(blocks.StructBlock):
         label = "Glossary"
 
 
+class KeyTakeawayBlock(blocks.StructBlock):
+    title = blocks.CharBlock(required=False, help_text="Optional label (e.g. Key takeaway).")
+    color = blocks.ChoiceBlock(
+        required=False,
+        default="blue",
+        choices=[
+            ("blue", "Blue"),
+            ("purple", "Purple"),
+            ("pink", "Pink"),
+            ("gold", "Gold"),
+        ],
+        help_text="Accent color for the callout.",
+    )
+    body = MarkdownBlock(required=True)
+
+    class Meta:
+        icon = "success"
+        label = "Key Takeaway"
+
+
 # Base blocks that can be used both at top-level and inside collapsible sections
 BASE_BLOCKS = [
     ("markdown", MarkdownBlock()),
@@ -90,6 +110,7 @@ BASE_BLOCKS = [
     ("raw_html", blocks.RawHTMLBlock()),
     ("quote", blocks.TextBlock()),
     ("glossary", GlossaryBlock()),
+    ("takeaway", KeyTakeawayBlock()),
 ]
 
 

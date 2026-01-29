@@ -458,8 +458,28 @@
             anchor.addEventListener("click", () => {
                 const url = `${window.location.origin}${window.location.pathname}#${id}`;
                 navigator.clipboard?.writeText(url).catch(() => {});
+                showCopyToast(anchor);
             });
             el.prepend(anchor);
+        };
+
+        const showCopyToast = (anchor) => {
+            const toast = document.createElement("div");
+            toast.className = "copy-toast";
+            toast.textContent = "Link copied";
+            document.body.appendChild(toast);
+            const rect = anchor.getBoundingClientRect();
+            const top = Math.max(12, rect.top - 28);
+            const left = Math.max(12, Math.min(rect.left, window.innerWidth - 120));
+            toast.style.top = `${top}px`;
+            toast.style.left = `${left}px`;
+            requestAnimationFrame(() => {
+                toast.classList.add("is-visible");
+            });
+            setTimeout(() => {
+                toast.classList.remove("is-visible");
+                setTimeout(() => toast.remove(), 200);
+            }, 1200);
         };
 
         content.querySelectorAll("p").forEach((p) => {
