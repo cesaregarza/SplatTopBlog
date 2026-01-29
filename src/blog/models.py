@@ -72,6 +72,7 @@ class CollapsibleBlock(blocks.StructBlock):
             ("explainer", "Explainer"),
             ("technical", "Technical"),
             ("extra", "Extra"),
+            ("subquest", "SubQuest"),
         ],
         help_text="Optional category to color-code the collapsible.",
     )

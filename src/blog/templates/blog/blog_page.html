@@ -2,29 +2,163 @@
 {% load wagtailcore_tags wagtailimages_tags wagtailmarkdown %}
 
 {% block content %}
-<article class="post">
-    <header class="post-header">
-        <h1 class="post-title">{{ page.title }}</h1>
-        {% if page.date %}
-            <p class="post-meta">
-                <time datetime="{{ page.date|date:'Y-m-d' }}">{{ page.date }}</time>
-            </p>
+<div class="post-layout">
+    <article class="post">
+        <header class="post-header">
+            <h1 class="post-title">{{ page.title }}</h1>
+            {% if page.date %}
+                <p class="post-meta">
+                    <time datetime="{{ page.date|date:'Y-m-d' }}">{{ page.date }}</time>
+                </p>
+            {% endif %}
+        </header>
+
+        {% if page.featured_image %}
+            {% image page.featured_image width-800 as img %}
+            <img src="{{ img.url }}" alt="{{ page.title }}" class="featured-image">
         {% endif %}
-    </header>
 
-    {% if page.featured_image %}
-        {% image page.featured_image width-800 as img %}
-        <img src="{{ img.url }}" alt="{{ page.title }}" class="featured-image">
-    {% endif %}
+        <div class="content post-content">
+            {% for block in page.body %}
+                {% include "blog/blocks/render_block.html" with block=block %}
+            {% endfor %}
+        </div>
+    </article>
 
-    <div class="content post-content">
-        {% for block in page.body %}
-            {% include "blog/blocks/render_block.html" with block=block %}
-        {% endfor %}
-    </div>
-</article>
+    <aside class="post-sidebar" aria-label="Post navigation">
+        <div class="post-toc">
+            <div class="post-toc__header">
+                <div class="post-toc__eyebrow">You are here</div>
+                <div class="post-toc__crumb" id="postTocCrumb">Loading...</div>
+            </div>
+            <div class="post-toc__title">On this page</div>
+            <nav class="post-toc__nav" aria-label="Table of contents">
+                <ul class="post-toc__list" id="postTocList"></ul>
+            </nav>
+        </div>
+    </aside>
+</div>
 
 <nav class="post-nav">
     <a href="{{ page.get_parent.url }}">&larr; Back to posts</a>
 </nav>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const setScrollOffset = () => {
+            const header = document.querySelector(".site-header");
+            if (!header) return;
+            const height = header.getBoundingClientRect().height;
+            const offset = Math.ceil(height + 16);
+            document.documentElement.style.setProperty("--site-header-offset", `${offset}px`);
+        };
+
+        setScrollOffset();
+        window.addEventListener("resize", setScrollOffset);
+
+        const content = document.querySelector(".post-content");
+        const tocList = document.getElementById("postTocList");
+        const crumbEl = document.getElementById("postTocCrumb");
+        const toc = document.querySelector(".post-toc");
+        if (!content || !tocList || !crumbEl || !toc) return;
+
+        const headings = Array.from(
+            content.querySelectorAll("h2, h3")
+        );
+
+        if (headings.length === 0) {
+            toc.closest(".post-sidebar").style.display = "none";
+            return;
+        }
+
+        const slugCounts = new Map();
+        const headingMeta = [];
+        let currentH2 = "";
+
+        const slugify = (text) => {
+            const base = text
+                .toLowerCase()
+                .replace(/[^a-z0-9\\s-]/g, "")
+                .trim()
+                .replace(/\\s+/g, "-");
+            const count = slugCounts.get(base) || 0;
+            slugCounts.set(base, count + 1);
+            return count ? `${base}-${count + 1}` : base || `section-${slugCounts.size}`;
+        };
+
+        headings.forEach((heading) => {
+            const text = heading.textContent.trim();
+            if (!heading.id) {
+                heading.id = slugify(text);
+            }
+            const level = heading.tagName.toLowerCase();
+            if (level === "h2") {
+                currentH2 = text;
+            }
+
+            headingMeta.push({
+                id: heading.id,
+                text,
+                level,
+                parent: level === "h3" ? currentH2 : "",
+            });
+        });
+
+        headingMeta.forEach((meta) => {
+            const li = document.createElement("li");
+            li.className = "post-toc__item";
+            if (meta.level === "h3") {
+                li.classList.add("post-toc__item--sub");
+            }
+
+            const link = document.createElement("a");
+            link.className = "post-toc__link";
+            link.href = `#${meta.id}`;
+            link.textContent = meta.text || meta.id;
+            link.dataset.tocId = meta.id;
+            li.appendChild(link);
+            tocList.appendChild(li);
+        });
+
+        const links = Array.from(tocList.querySelectorAll(".post-toc__link"));
+
+        const updateActive = (id) => {
+            links.forEach((link) => {
+                link.classList.toggle("is-active", link.dataset.tocId === id);
+            });
+            const meta = headingMeta.find((entry) => entry.id === id);
+            if (!meta) return;
+            if (meta.level === "h3" && meta.parent) {
+                crumbEl.textContent = `${meta.parent} → ${meta.text}`;
+            } else {
+                crumbEl.textContent = meta.text;
+            }
+        };
+
+        let ticking = false;
+        const onScroll = () => {
+            if (ticking) return;
+            ticking = true;
+            window.requestAnimationFrame(() => {
+                const fromTop = window.scrollY + 140;
+                let current = headings[0];
+                for (const heading of headings) {
+                    if (heading.offsetTop <= fromTop) {
+                        current = heading;
+                    } else {
+                        break;
+                    }
+                }
+                if (current) updateActive(current.id);
+                ticking = false;
+            });
+        };
+
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", onScroll);
+        onScroll();
+    });
+</script>
 {% endblock %}

@@ -6,7 +6,7 @@
             <span class="collapsible-block__title">{{ value.title }}</span>
             {% if category %}
             <span class="collapsible-block__badge collapsible-block__badge--{{ category }}">
-                {{ category|capfirst }}
+                {% if category == "subquest" %}SubQuest{% else %}{{ category|capfirst }}{% endif %}
             </span>
             {% endif %}
         </span>
