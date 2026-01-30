@@ -553,13 +553,30 @@
           button.type = "button";
           button.className = "glossary-term";
           button.dataset.termKey = key;
+          let lastPointerType = null;
           button.textContent = displayText;
           button.addEventListener("mouseenter", () => showTooltip(button));
           button.addEventListener("mouseleave", hideTooltip);
           button.addEventListener("focus", () => showTooltip(button));
           button.addEventListener("blur", hideTooltip);
+          button.addEventListener("pointerdown", (event) => {
+            lastPointerType = event.pointerType || "mouse";
+          });
+          button.addEventListener(
+            "touchstart",
+            () => {
+              lastPointerType = "touch";
+            },
+            { passive: true }
+          );
           button.addEventListener("click", (event) => {
             event.stopPropagation();
+            const pointerType = lastPointerType;
+            lastPointerType = null;
+            if (pointerType === "touch") {
+              showTooltip(button);
+              return;
+            }
             if (activeTarget === button) {
               hideTooltip();
             } else {
