@@ -143,31 +143,49 @@
         });
       });
 
-      const itemRefs = [];
+      let itemRefs = [];
 
       const hasH1 = headingMeta.some((entry) => entry.level === "h1");
+      const hasStaticToc = tocList.children.length > 0;
 
-      headingMeta.forEach((meta) => {
-        const li = document.createElement("li");
-        li.className = "post-toc__item";
-        li.classList.add(`post-toc__item--${meta.level}`);
-        li.dataset.level = meta.level;
-        itemRefs.push(li);
+      if (!hasStaticToc) {
+        headingMeta.forEach((meta) => {
+          const li = document.createElement("li");
+          li.className = "post-toc__item";
+          li.classList.add(`post-toc__item--${meta.level}`);
+          li.dataset.level = meta.level;
+          itemRefs.push(li);
 
-        const link = document.createElement("a");
-        link.className = "post-toc__link";
-        link.href = `#${meta.id}`;
-        link.textContent = meta.text || meta.id;
-        link.dataset.tocId = meta.id;
-        if (meta.parentId) {
-          link.dataset.parentId = meta.parentId;
-        }
-        if (meta.grandparentId) {
-          link.dataset.grandparentId = meta.grandparentId;
-        }
-        li.appendChild(link);
-        tocList.appendChild(li);
-      });
+          const link = document.createElement("a");
+          link.className = "post-toc__link";
+          link.href = `#${meta.id}`;
+          link.textContent = meta.text || meta.id;
+          link.dataset.tocId = meta.id;
+          if (meta.parentId) {
+            link.dataset.parentId = meta.parentId;
+          }
+          if (meta.grandparentId) {
+            link.dataset.grandparentId = meta.grandparentId;
+          }
+          li.appendChild(link);
+          tocList.appendChild(li);
+        });
+        itemRefs = Array.from(tocList.querySelectorAll(".post-toc__item"));
+      } else {
+        itemRefs = Array.from(tocList.querySelectorAll(".post-toc__item"));
+        itemRefs.forEach((item) => {
+          if (item.dataset.level) return;
+          if (item.classList.contains("post-toc__item--h1")) item.dataset.level = "h1";
+          else if (item.classList.contains("post-toc__item--h2")) item.dataset.level = "h2";
+          else if (item.classList.contains("post-toc__item--h3")) item.dataset.level = "h3";
+        });
+        tocList.querySelectorAll(".post-toc__link").forEach((link) => {
+          if (!link.dataset.tocId) {
+            const href = link.getAttribute("href") || "";
+            if (href.startsWith("#")) link.dataset.tocId = href.slice(1);
+          }
+        });
+      }
 
       const links = Array.from(tocList.querySelectorAll(".post-toc__link"));
 
@@ -541,13 +559,10 @@
         const manualPattern = /\[\[([^\]]+)\]\]/g;
         const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
 
-        const makeButton = (displayText, key) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "glossary-term";
-          button.dataset.termKey = key;
+        const wireGlossaryButton = (button) => {
+          if (!button || button.dataset.glossaryWired === "true") return;
+          button.dataset.glossaryWired = "true";
           let lastPointerType = null;
-          button.textContent = displayText;
           button.addEventListener("mouseenter", () => showTooltip(button));
           button.addEventListener("mouseleave", hideTooltip);
           button.addEventListener("focus", () => showTooltip(button));
@@ -576,6 +591,15 @@
               showTooltip(button);
             }
           });
+        };
+
+        const makeButton = (displayText, key) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "glossary-term";
+          button.dataset.termKey = key;
+          button.textContent = displayText;
+          wireGlossaryButton(button);
           return button;
         };
 
@@ -668,6 +692,18 @@
             });
           }
         }
+
+        content.querySelectorAll(".glossary-term").forEach((button) => {
+          if (!button.dataset.termKey) {
+            const key = (button.textContent || "").trim().toLowerCase();
+            if (glossaryTerms.has(key)) {
+              button.dataset.termKey = key;
+            }
+          }
+          if (button.dataset.termKey) {
+            wireGlossaryButton(button);
+          }
+        });
 
         document.addEventListener(
           "scroll",

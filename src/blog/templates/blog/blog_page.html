@@ -12,9 +12,9 @@
                 </p>
             {% endif %}
             <div class="post-readtime" id="postReadTime" aria-live="polite">
-                <span class="post-readtime__main">Main path: -- min</span>
+                <span class="post-readtime__main">Main path: {{ readtime_main|default:"-- min" }}</span>
                 <span class="post-readtime__divider">•</span>
-                <span class="post-readtime__deep">With deep dives: -- min</span>
+                <span class="post-readtime__deep">With deep dives: {{ readtime_deep|default:"-- min" }}</span>
             </div>
         </header>
 
@@ -24,28 +24,48 @@
         {% endif %}
 
         <div class="content post-content">
-            {% for block in page.body %}
-                {% include "blog/blocks/render_block.html" with block=block %}
-            {% endfor %}
+            {% if body_html %}
+                {{ body_html|safe }}
+            {% else %}
+                {% for block in page.body %}
+                    {% include "blog/blocks/render_block.html" with block=block %}
+                {% endfor %}
+            {% endif %}
         </div>
     </article>
 
-    <aside class="post-sidebar" aria-label="Post navigation">
-        <div class="post-toc">
-            <div class="post-toc__progress">
-                <span class="post-toc__progress-bar" id="postTocProgress"></span>
+    {% if toc_items %}
+        <aside class="post-sidebar" aria-label="Post navigation">
+            <div class="post-toc">
+                <div class="post-toc__progress">
+                    <span class="post-toc__progress-bar" id="postTocProgress"></span>
+                </div>
+                <div class="post-toc__header">
+                    <div class="post-toc__eyebrow">You are here</div>
+                    <div class="post-toc__crumb" id="postTocCrumb">{{ toc_crumb|default:"On this page" }}</div>
+                </div>
+                <div class="post-toc__title">On this page</div>
+                <nav class="post-toc__nav" aria-label="Table of contents">
+                    <ul class="post-toc__list" id="postTocList">
+                        {% for item in toc_items %}
+                            <li class="post-toc__item post-toc__item--{{ item.level }}" data-level="{{ item.level }}">
+                                <a
+                                    class="post-toc__link"
+                                    href="#{{ item.id }}"
+                                    data-toc-id="{{ item.id }}"
+                                    {% if item.parent_id %}data-parent-id="{{ item.parent_id }}"{% endif %}
+                                    {% if item.grandparent_id %}data-grandparent-id="{{ item.grandparent_id }}"{% endif %}
+                                >
+                                    {{ item.text }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </nav>
             </div>
-            <div class="post-toc__header">
-                <div class="post-toc__eyebrow">You are here</div>
-                <div class="post-toc__crumb" id="postTocCrumb">Loading...</div>
-            </div>
-            <div class="post-toc__title">On this page</div>
-            <nav class="post-toc__nav" aria-label="Table of contents">
-                <ul class="post-toc__list" id="postTocList"></ul>
-            </nav>
-        </div>
-    </aside>
-    <div class="post-toc-backdrop" id="postTocBackdrop" aria-hidden="true"></div>
+        </aside>
+        <div class="post-toc-backdrop" id="postTocBackdrop" aria-hidden="true"></div>
+    {% endif %}
 </div>
 
 <nav class="post-nav">
@@ -54,10 +74,12 @@
 {% endblock %}
 
 {% block header_actions %}
-<button class="post-toc-drawer-toggle" id="postTocDrawerToggle" type="button" aria-expanded="false">
-    <span class="post-toc-drawer-toggle__icon" aria-hidden="true"><span></span></span>
-    <span class="post-toc-drawer-toggle__label">Outline</span>
-</button>
+{% if toc_items %}
+    <button class="post-toc-drawer-toggle" id="postTocDrawerToggle" type="button" aria-expanded="false">
+        <span class="post-toc-drawer-toggle__icon" aria-hidden="true"><span></span></span>
+        <span class="post-toc-drawer-toggle__label">Outline</span>
+    </button>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

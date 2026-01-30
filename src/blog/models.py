@@ -7,6 +7,7 @@ from wagtail.images.blocks import ImageChooserBlock
 from wagtail.models import Page
 from wagtailmarkdown.blocks import MarkdownBlock
 
+from .post_processing import render_blog_body
 
 class CodeBlock(blocks.StructBlock):
     language = blocks.CharBlock(
@@ -194,6 +195,11 @@ class BlogPage(Page):
 
     parent_page_types = ["blog.BlogIndexPage"]
     subpage_types = []
+
+    def get_context(self, request):
+        context = super().get_context(request)
+        context.update(render_blog_body(self.body))
+        return context
 
     class Meta:
         verbose_name = "Blog Post"
