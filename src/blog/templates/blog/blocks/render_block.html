@@ -14,7 +14,12 @@
     {% with caption=block.value.caption %}
         {% image block.value.image width-1200 as img %}
         <figure class="post-image">
-            <img src="{{ img.url }}" alt="{{ caption|default:block.value.image.title }}">
+            <img
+                src="{{ img.url }}"
+                alt="{{ caption|default:block.value.image.title }}"
+                loading="lazy"
+                decoding="async"
+            >
             {% if caption %}
                 <figcaption>{{ caption }}</figcaption>
             {% endif %}

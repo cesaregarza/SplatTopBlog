@@ -151,6 +151,13 @@ class PostProcessor(HTMLParser):
             return ""
         return " " + " ".join(parts)
 
+    def _ensure_attr(self, attrs, key, value):
+        for existing_key, _ in attrs:
+            if existing_key == key:
+                return attrs
+        attrs.append((key, value))
+        return attrs
+
     def _is_skip_tag(self, tag, attrs):
         if tag in self._skip_tags:
             return True
@@ -258,6 +265,10 @@ class PostProcessor(HTMLParser):
         self._skip_stack.append(skip_tag)
         if skip_tag:
             self._skip_depth += 1
+        attrs = list(attrs)
+        if tag == "img":
+            self._ensure_attr(attrs, "loading", "lazy")
+            self._ensure_attr(attrs, "decoding", "async")
         if tag in {"h1", "h2", "h3", "h4", "h5", "h6"} and self._heading is None:
             self._heading = {"tag": tag, "attrs": list(attrs), "buffer": [], "text": []}
             return
@@ -317,6 +328,10 @@ class PostProcessor(HTMLParser):
         skip_tag = self._is_skip_tag(tag, attrs)
         if skip_tag:
             self._skip_depth += 1
+        attrs = list(attrs)
+        if tag == "img":
+            self._ensure_attr(attrs, "loading", "lazy")
+            self._ensure_attr(attrs, "decoding", "async")
         self._write(f"<{tag}{self._format_attrs(attrs)} />")
         if skip_tag:
             self._skip_depth = max(0, self._skip_depth - 1)

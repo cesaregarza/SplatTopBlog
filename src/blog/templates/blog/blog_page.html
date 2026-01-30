@@ -20,7 +20,13 @@
 
         {% if page.featured_image %}
             {% image page.featured_image width-800 as img %}
-            <img src="{{ img.url }}" alt="{{ page.title }}" class="featured-image">
+            <img
+                src="{{ img.url }}"
+                alt="{{ page.title }}"
+                class="featured-image"
+                decoding="async"
+                fetchpriority="high"
+            >
         {% endif %}
 
         <div class="content post-content">
