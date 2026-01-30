@@ -99,14 +99,7 @@
       el.prepend(anchor);
     };
 
-    content.querySelectorAll("p").forEach((p) => addAnchor(p, "p"));
     content.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((heading) => addAnchor(heading, "h"));
-    content.querySelectorAll(".collapsible-block__summary").forEach((summary) => {
-      const titleEl = summary.querySelector(".collapsible-block__title");
-      const text = titleEl ? titleEl.textContent.trim() : summary.textContent.trim();
-      if (!text) return;
-      addAnchor(summary, "c", "", text);
-    });
 
     const headings = Array.from(content.querySelectorAll("h1, h2, h3"));
 
