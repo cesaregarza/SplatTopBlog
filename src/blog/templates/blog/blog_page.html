@@ -18,16 +18,18 @@
             </div>
         </header>
 
-        {% if page.featured_image %}
-            {% image page.featured_image width-800 as img %}
+            {% if page.featured_image %}
+                {% image page.featured_image width-800 as img %}
             <img
                 src="{{ img.url }}"
                 alt="{{ page.title }}"
                 class="featured-image"
+                width="{{ img.width }}"
+                height="{{ img.height }}"
                 decoding="async"
                 fetchpriority="high"
             >
-        {% endif %}
+            {% endif %}
 
         <div class="content post-content">
             {% if body_html %}

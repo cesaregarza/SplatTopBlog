@@ -17,6 +17,8 @@
             <img
                 src="{{ img.url }}"
                 alt="{{ caption|default:block.value.image.title }}"
+                width="{{ img.width }}"
+                height="{{ img.height }}"
                 loading="lazy"
                 decoding="async"
             >
