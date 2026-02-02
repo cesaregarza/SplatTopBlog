@@ -562,6 +562,10 @@
         const wireGlossaryButton = (button) => {
           if (!button || button.dataset.glossaryWired === "true") return;
           button.dataset.glossaryWired = "true";
+          if (button.hasAttribute("title")) {
+            button.dataset.nativeTitle = button.getAttribute("title") || "";
+            button.removeAttribute("title");
+          }
           let lastPointerType = null;
           button.addEventListener("mouseenter", () => showTooltip(button));
           button.addEventListener("mouseleave", hideTooltip);

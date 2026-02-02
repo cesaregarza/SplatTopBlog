@@ -249,6 +249,7 @@ WAGTAILMARKDOWN = {
     "extensions": [
         "extra",
         "blog.markdown_extensions.latex",
+        "blog.markdown_extensions.random_choice",
         "codehilite",
         "tables",
         "toc",
