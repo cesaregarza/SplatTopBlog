@@ -673,6 +673,13 @@ h1, h2, h3, h4 {
     text-transform: uppercase;
 }
 
+.post-abstract {
+    margin-top: 0.9rem;
+    font-size: 1.1rem;
+    color: rgba(201, 209, 217, 0.85);
+    line-height: 1.6;
+}
+
 .post-readtime {
     margin-top: 0.75rem;
     display: flex;

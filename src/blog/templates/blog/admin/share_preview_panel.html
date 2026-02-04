@@ -1,0 +1,38 @@
+{% load wagtailimages_tags %}
+<fieldset class="share-preview-panel">
+    {% if self.heading %}
+        <legend class="w-sr-only">{{ self.heading }}</legend>
+    {% endif %}
+    <div class="share-preview">
+        <div class="share-preview__label">Share preview</div>
+        <div class="share-preview__card">
+            <div class="share-preview__media">
+                {% if self.instance.featured_image %}
+                    {% image self.instance.featured_image width-240 as preview_img %}
+                    <img
+                        src="{{ preview_img.url }}"
+                        alt="{{ self.instance.title }}"
+                        width="{{ preview_img.width }}"
+                        height="{{ preview_img.height }}"
+                        class="share-preview__image"
+                    >
+                {% else %}
+                    <div class="share-preview__placeholder">No image</div>
+                {% endif %}
+            </div>
+            <div class="share-preview__body">
+                {% if self.instance.full_url %}
+                    <div class="share-preview__domain">
+                        {{ self.instance.full_url|cut:"https://"|cut:"http://"|truncatechars:50 }}
+                    </div>
+                {% endif %}
+                <div class="share-preview__title">
+                    {{ self.instance.seo_title|default:self.instance.title|truncatechars:80 }}
+                </div>
+                <div class="share-preview__desc">
+                    {{ self.instance.abstract|default:self.instance.search_description|truncatechars:160 }}
+                </div>
+            </div>
+        </div>
+    </div>
+</fieldset>

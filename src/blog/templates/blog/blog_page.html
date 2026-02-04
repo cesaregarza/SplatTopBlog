@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% load static wagtailcore_tags wagtailimages_tags wagtailmarkdown %}
 
+{% block description %}{{ page.abstract|default:page.search_description }}{% endblock %}
+{% block og_description %}{{ page.abstract|default:page.search_description }}{% endblock %}
+{% block twitter_description %}{{ page.abstract|default:page.search_description }}{% endblock %}
+{% block og_type %}article{% endblock %}
+
 {% block content %}
 <div class="post-layout">
     <article class="post">
@@ -10,6 +15,9 @@
                 <p class="post-meta">
                     <time datetime="{{ page.date|date:'Y-m-d' }}">{{ page.date }}</time>
                 </p>
+            {% endif %}
+            {% if page.abstract %}
+                <p class="post-abstract">{{ page.abstract }}</p>
             {% endif %}
             <div class="post-readtime" id="postReadTime" aria-live="polite">
                 <span class="post-readtime__main">Main path: {{ readtime_main|default:"-- min" }}</span>

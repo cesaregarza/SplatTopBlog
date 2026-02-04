@@ -1,7 +1,7 @@
 from django.core.paginator import Paginator
 from django.db import models
 from wagtail import blocks
-from wagtail.admin.panels import FieldPanel
+from wagtail.admin.panels import FieldPanel, HelpPanel
 from wagtail.fields import StreamField
 from wagtail.images.blocks import ImageChooserBlock
 from wagtail.models import Page
@@ -182,6 +182,10 @@ class BlogPage(Page):
     """Individual blog post page."""
 
     date = models.DateField("Post date", null=True, blank=True)
+    abstract = models.TextField(
+        blank=True,
+        help_text="Optional abstract/summary used for OpenGraph and meta descriptions.",
+    )
     body = StreamField(
         BASE_BLOCKS + [("collapsible", CollapsibleBlock())],
         blank=True,
@@ -191,6 +195,14 @@ class BlogPage(Page):
     content_panels = Page.content_panels + [
         FieldPanel("date"),
         FieldPanel("body"),
+    ]
+
+    promote_panels = Page.promote_panels + [
+        FieldPanel("abstract"),
+        HelpPanel(
+            template="blog/admin/share_preview_panel.html",
+            heading="Share preview",
+        ),
     ]
 
     parent_page_types = ["blog.BlogIndexPage"]
