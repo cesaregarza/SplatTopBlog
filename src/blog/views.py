@@ -138,7 +138,7 @@ def _render_block(block):
         title = _escape_tag_value(_struct_value_get(value, "title", ""))
         src = _escape_tag_value(_struct_value_get(value, "src", ""))
         lazy = "true" if _struct_value_get(value, "lazy_load", True) else "false"
-        raw_max_height = _struct_value_get(value, "max_height", 700)
+        raw_max_height = _struct_value_get(value, "max_height", "")
         max_height = _escape_tag_value(
             "" if raw_max_height in ("", None) else str(raw_max_height)
         )

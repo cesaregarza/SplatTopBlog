@@ -133,8 +133,6 @@ class AppletEmbedBlock(blocks.StructBlock):
 
     def clean(self, value):
         cleaned = super().clean(value)
-        if cleaned.get("max_height") in (None, ""):
-            cleaned["max_height"] = 700
         src = (cleaned.get("src") or "").strip()
         if not src.startswith("/static/applets/"):
             raise ValidationError(

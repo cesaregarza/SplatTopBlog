@@ -160,12 +160,17 @@ class TestAppletEmbedBlock(TestCase):
 
     def test_applet_embed_uses_default_max_height(self):
         block = AppletEmbedBlock()
+        self.assertEqual(block.child_blocks["max_height"].meta.default, 700)
+
+    def test_applet_embed_blank_max_height_stays_unset(self):
+        block = AppletEmbedBlock()
         cleaned = block.clean(
             {
-                "title": "Default Height",
+                "title": "Auto Height",
                 "src": "/static/applets/loser-winner.html",
                 "lazy_load": True,
+                "max_height": None,
                 "style_overrides": "",
             }
         )
-        self.assertEqual(cleaned["max_height"], 700)
+        self.assertIsNone(cleaned.get("max_height"))

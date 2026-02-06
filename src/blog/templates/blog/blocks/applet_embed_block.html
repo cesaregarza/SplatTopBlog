@@ -3,7 +3,7 @@
         src="{{ value.src }}"
         class="applet-frame"
         data-applet-embed="true"
-        data-applet-max-height="{{ value.max_height|default:700 }}"
+        {% if value.max_height %}data-applet-max-height="{{ value.max_height }}"{% endif %}
         title="{{ value.title }}"
         loading="{% if value.lazy_load %}lazy{% else %}eager{% endif %}"
         referrerpolicy="strict-origin-when-cross-origin"
