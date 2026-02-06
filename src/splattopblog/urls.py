@@ -13,11 +13,13 @@ from wagtail.documents import urls as wagtaildocs_urls
 
 from blog import views as blog_views
 from blog.feeds import BlogAtomFeed, BlogFeed
+from blog.robots import robots_txt
 
 handler404 = "blog.views.custom_404"
 handler500 = "blog.views.custom_500"
 
 urlpatterns = [
+    path("robots.txt", robots_txt, name="robots-txt"),
     path("django-admin/", admin.site.urls),
     path("admin/", include(wagtailadmin_urls)),
     path("documents/", include(wagtaildocs_urls)),
