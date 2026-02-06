@@ -166,8 +166,13 @@
           const body = doc.body;
           if (!html || !body) return;
           previousInlineHeight = frame.style.height;
-          // Neutralize existing inline height so we measure content size, not viewport floor.
-          frame.style.height = "0px";
+          const rect = frame.getBoundingClientRect();
+          const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+          const isInViewport = rect.bottom > 0 && rect.top < viewportHeight;
+          // Avoid visible layout jumps while reading; only collapse for measurement offscreen.
+          if (!isInViewport) {
+            frame.style.height = "0px";
+          }
           const measuredHeight = Math.max(
             html.scrollHeight,
             html.offsetHeight,

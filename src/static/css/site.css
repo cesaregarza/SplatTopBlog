@@ -1094,6 +1094,7 @@ pre code {
     background: transparent;
     box-shadow: none;
     overflow: hidden;
+    overflow-anchor: none;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
