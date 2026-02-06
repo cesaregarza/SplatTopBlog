@@ -45,119 +45,18 @@
       const ensureEmbeddedStyling = (doc) => {
         if (!doc || !doc.documentElement) return;
         doc.documentElement.classList.add("is-embedded");
+      };
 
-        const styleId = "__applet_embed_scrollbar_theme";
-        if (doc.getElementById(styleId)) return;
-        const style = doc.createElement("style");
-        style.id = styleId;
-        style.textContent = `
-          :root.is-embedded,
-          :root.is-embedded body {
-            height: auto;
-            min-height: 0;
-            overflow: auto;
-            scrollbar-width: thin;
-            scrollbar-gutter: stable;
-            -ms-overflow-style: none;
-            scrollbar-color: transparent transparent;
-          }
-
-          :root.is-embedded::-webkit-scrollbar,
-          :root.is-embedded body::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-          }
-
-          :root.is-embedded::-webkit-scrollbar-track,
-          :root.is-embedded body::-webkit-scrollbar-track {
-            background: transparent;
-            border-radius: 9999px;
-          }
-
-          :root.is-embedded::-webkit-scrollbar-thumb,
-          :root.is-embedded body::-webkit-scrollbar-thumb {
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 9999px;
-          }
-
-          :root.is-embedded body * {
-            scrollbar-width: thin;
-            scrollbar-gutter: stable;
-            scrollbar-color: transparent transparent;
-          }
-
-          :root.is-embedded:hover,
-          :root.is-embedded:focus-within,
-          :root.is-embedded body:hover,
-          :root.is-embedded body:focus-within {
-            scrollbar-color: rgba(217, 70, 239, 0.92) rgba(15, 23, 42, 0.36);
-          }
-
-          :root.is-embedded:hover::-webkit-scrollbar-track,
-          :root.is-embedded:focus-within::-webkit-scrollbar-track,
-          :root.is-embedded body:hover::-webkit-scrollbar-track,
-          :root.is-embedded body:focus-within::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.32);
-          }
-
-          :root.is-embedded:hover::-webkit-scrollbar-thumb,
-          :root.is-embedded:focus-within::-webkit-scrollbar-thumb,
-          :root.is-embedded body:hover::-webkit-scrollbar-thumb,
-          :root.is-embedded body:focus-within::-webkit-scrollbar-thumb {
-            background: linear-gradient(
-              180deg,
-              rgba(217, 70, 239, 0.94),
-              rgba(171, 90, 183, 0.88)
-            );
-            border: 1px solid rgba(15, 23, 42, 0.65);
-          }
-
-          :root.is-embedded body *::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-          }
-
-          :root.is-embedded body *::-webkit-scrollbar-track {
-            background: transparent;
-            border-radius: 9999px;
-          }
-
-          :root.is-embedded body *::-webkit-scrollbar-thumb {
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 9999px;
-          }
-
-          :root.is-embedded body *:hover,
-          :root.is-embedded body *:focus,
-          :root.is-embedded body *:focus-within {
-            scrollbar-color: rgba(217, 70, 239, 0.92) rgba(15, 23, 42, 0.36);
-          }
-
-          :root.is-embedded body *:hover::-webkit-scrollbar-track,
-          :root.is-embedded body *:focus::-webkit-scrollbar-track,
-          :root.is-embedded body *:focus-within::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.32);
-          }
-
-          :root.is-embedded body *:hover::-webkit-scrollbar-thumb,
-          :root.is-embedded body *:focus::-webkit-scrollbar-thumb,
-          :root.is-embedded body *:focus-within::-webkit-scrollbar-thumb {
-            background: linear-gradient(
-              180deg,
-              rgba(217, 70, 239, 0.94),
-              rgba(171, 90, 183, 0.88)
-            );
-            border: 1px solid rgba(15, 23, 42, 0.65);
-            border-radius: 9999px;
-          }
-        `;
-        doc.head?.appendChild(style);
+      const queueResizeFrame = (frame) => {
+        if (frame.dataset.appletResizeQueued === "true") return;
+        frame.dataset.appletResizeQueued = "true";
+        requestAnimationFrame(() => {
+          frame.dataset.appletResizeQueued = "false";
+          resizeFrame(frame);
+        });
       };
 
       const resizeFrame = (frame) => {
-        let previousInlineHeight = null;
         try {
           const doc = frame.contentDocument;
           if (!doc) return;
@@ -165,14 +64,6 @@
           const html = doc.documentElement;
           const body = doc.body;
           if (!html || !body) return;
-          previousInlineHeight = frame.style.height;
-          const rect = frame.getBoundingClientRect();
-          const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-          const isInViewport = rect.bottom > 0 && rect.top < viewportHeight;
-          // Avoid visible layout jumps while reading; only collapse for measurement offscreen.
-          if (!isInViewport) {
-            frame.style.height = "0px";
-          }
           const measuredHeight = Math.max(
             html.scrollHeight,
             html.offsetHeight,
@@ -181,7 +72,6 @@
             Math.ceil(body.getBoundingClientRect().height)
           );
           if (!Number.isFinite(measuredHeight) || measuredHeight < 120) {
-            frame.style.height = previousInlineHeight;
             return;
           }
           const useFullHeight = frame.getAttribute("data-applet-full-height") === "true";
@@ -191,13 +81,15 @@
           const targetHeight = hasMaxHeight
             ? Math.min(Math.ceil(measuredHeight), parsedMaxHeight)
             : Math.ceil(measuredHeight);
+          const previousHeight = Number.parseInt(frame.dataset.appletMeasuredHeight || "", 10);
+          if (Number.isFinite(previousHeight) && Math.abs(previousHeight - targetHeight) < 2) {
+            return;
+          }
+          frame.dataset.appletMeasuredHeight = `${targetHeight}`;
           frame.style.maxHeight = hasMaxHeight ? `${parsedMaxHeight}px` : "";
           frame.style.height = `${targetHeight}px`;
         } catch (err) {
           // Cross-origin frame; keep CSS fallback height.
-          if (previousInlineHeight !== null) {
-            frame.style.height = previousInlineHeight;
-          }
           if (frame.getAttribute("data-applet-full-height") === "true") {
             frame.style.maxHeight = "";
             frame.style.height = "";
@@ -207,18 +99,25 @@
 
       frames.forEach((frame) => {
         const onLoad = () => {
-          resizeFrame(frame);
-          setTimeout(() => resizeFrame(frame), 60);
-          setTimeout(() => resizeFrame(frame), 260);
+          queueResizeFrame(frame);
+          setTimeout(() => queueResizeFrame(frame), 60);
+          setTimeout(() => queueResizeFrame(frame), 260);
+          if (frame.dataset.appletResizeHooksBound === "true") {
+            return;
+          }
+          frame.dataset.appletResizeHooksBound = "true";
           try {
             const win = frame.contentWindow;
             if (win) {
-              win.addEventListener("resize", () => resizeFrame(frame));
+              win.addEventListener("resize", () => queueResizeFrame(frame));
             }
             const doc = frame.contentDocument;
             if (doc && doc.body && "ResizeObserver" in window) {
-              const observer = new ResizeObserver(() => resizeFrame(frame));
+              const observer = new ResizeObserver(() => queueResizeFrame(frame));
               observer.observe(doc.body);
+              if (doc.documentElement) {
+                observer.observe(doc.documentElement);
+              }
             }
           } catch (err) {
             // Ignore sizing hooks when frame internals are inaccessible.

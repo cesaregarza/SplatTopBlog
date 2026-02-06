@@ -26,11 +26,18 @@ html.is-embedded body {
 
 /* Embedded mode keeps scrolling active, hides scrollbar chrome until interaction,
    and uses SplatTop theming when visible. */
-html.is-embedded,
+html.is-embedded {
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 html.is-embedded body {
   height: auto;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
   scrollbar-width: thin;
   scrollbar-gutter: stable;
   -ms-overflow-style: none;
