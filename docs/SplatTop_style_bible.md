@@ -874,84 +874,94 @@ The SplatTop Blog (`blog.splat.top`) is a Wagtail CMS site that extends the core
 
 ### Collapsible Blocks
 
-Used for expandable content sections (Side Quests, Deep Dives, etc.)
+Used for expandable content sections. Each category maps to a CSS modifier class
+(e.g. `.collapsible-block--subquest`) and uses CSS custom properties for theming.
 
-| Category | Accent Color | Background |
-|----------|-------------|------------|
-| Default | `#ab5ab7` (purple) | `rgba(171,90,183,0.06)` |
-| Deep Dive | `#3b82f6` (blue) | `rgba(59,130,246,0.06)` |
-| Side Quest | `#f59e0b` (amber) | `rgba(245,158,11,0.06)` |
-| Technical | `#10b981` (emerald) | `rgba(16,185,129,0.06)` |
+| Category | Model value | Accent | Background | Badge text |
+|----------|------------|--------|------------|------------|
+| Default | `""` | (inherits base purple) | (inherits base) | — |
+| Explainer | `"explainer"` | `rgba(56,189,248,0.25)` (sky) | `rgba(56,189,248,0.1)` | `#cffafe` |
+| Technical | `"technical"` | `rgba(193,131,225,0.3)` (purple-light) | `rgba(193,131,225,0.12)` | `#f3e8ff` |
+| Extra | `"extra"` | `rgba(236,72,153,0.28)` (pink) | `rgba(236,72,153,0.1)` | `#fde2f2` |
+| Side Quest | `"subquest"` | `rgba(253,230,138,0.32)` (amber) | `rgba(253,230,138,0.12)` | `#fde68a` |
 
-```css
-.collapsible-block {
-  border: 1px solid rgba(171, 90, 183, 0.2);
-  border-radius: 12px;
-  margin: 1.5rem 0;
-}
-
-.collapsible-block summary {
-  cursor: pointer;
-  padding: 0.75rem 1rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-```
+Each category sets these custom properties: `--collapsible-accent`, `--collapsible-accent-bg`,
+`--collapsible-accent-hover`, `--collapsible-badge-bg`, `--collapsible-badge-border`,
+`--collapsible-badge-text`, `--collapsible-icon`.
 
 ### Key Takeaway Callouts
 
-Highlighted callout boxes for important information.
+Highlighted callout boxes for important information. Uses CSS custom properties
+(`--takeaway-accent`, `--takeaway-bg`, `--takeaway-title`, `--takeaway-glow`, `--takeaway-shadow`).
 
-| Color | Left Border | Background | Icon Area |
-|-------|------------|------------|-----------|
-| Blue (default) | `#3b82f6` | `rgba(59,130,246,0.08)` | `rgba(59,130,246,0.15)` |
-| Purple | `#ab5ab7` | `rgba(171,90,183,0.08)` | `rgba(171,90,183,0.15)` |
-| Green | `#10b981` | `rgba(16,185,129,0.08)` | `rgba(16,185,129,0.15)` |
-| Amber | `#f59e0b` | `rgba(245,158,11,0.08)` | `rgba(245,158,11,0.15)` |
-| Red | `#ef4444` | `rgba(239,68,68,0.08)` | `rgba(239,68,68,0.15)` |
+| Color | CSS class | Accent | Background | Title text | Glow |
+|-------|-----------|--------|------------|------------|------|
+| Blue (default) | `.takeaway` | `rgba(56,189,248,0.35)` | `rgba(56,189,248,0.08)` | `#cffafe` | `rgba(56,189,248,0.6)` |
+| Purple | `.takeaway--purple` | `rgba(217,70,239,0.35)` | `rgba(217,70,239,0.1)` | `#f6e7fb` | `rgba(217,70,239,0.7)` |
+| Pink | `.takeaway--pink` | `rgba(236,72,153,0.35)` | `rgba(236,72,153,0.1)` | `#fde2f2` | `rgba(236,72,153,0.7)` |
+| Gold | `.takeaway--gold` | `rgba(253,230,138,0.45)` | `rgba(253,230,138,0.12)` | `#fde68a` | `rgba(253,230,138,0.75)` |
 
 ### Glossary Tooltips
 
 ```css
 .glossary-term {
   color: var(--color-fuchsia-lighter);               /* #e879f9 */
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
+  border-bottom: 1px dashed rgba(217, 70, 239, 0.55);
   cursor: help;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.glossary-term:hover {
+  color: #ffffff;
+  border-bottom-color: rgba(244, 114, 182, 0.9);
 }
 
 .glossary-tooltip {
-  background: var(--color-surface-hint);             /* rgba(13,17,23,0.74) */
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(217, 70, 239, 0.35);
+  border-radius: 12px;
   backdrop-filter: blur(16px);
-  color: var(--color-text-secondary);
+  box-shadow: 0 16px 36px rgba(1, 4, 9, 0.7);
   font-size: 0.85rem;
-  max-width: 320px;
+  max-width: min(320px, 80vw);
 }
 ```
 
 ### Table of Contents Sidebar
 
+The TOC lives in `.post-sidebar` > `.post-toc`, using sticky positioning on desktop
+and a slide-in drawer on mobile (below 1100px).
+
 ```css
-.toc-sidebar {
-  position: sticky;
-  top: 5rem;
-  max-height: calc(100vh - 7rem);
-  overflow-y: auto;
-  font-size: 0.85rem;
+.post-toc {
+  border: 1px solid rgba(217, 70, 239, 0.2);
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 16px;
+  backdrop-filter: blur(16px);
 }
 
-.toc-link {
+.post-toc__link {
+  font-size: 0.82rem;
   color: var(--color-text-muted);                    /* #8b949e */
-  transition: color 150ms ease;
+  border-radius: 10px;
+  border: 1px solid transparent;
 }
 
-.toc-link:hover,
-.toc-link.active {
-  color: var(--color-purple-light);                  /* #c183e1 */
+.post-toc__link:hover {
+  color: var(--color-text-primary);
+  background: rgba(217, 70, 239, 0.08);
+  border-color: rgba(217, 70, 239, 0.18);
+}
+
+.post-toc__link.is-active {
+  color: #fdf4ff;
+  background: rgba(217, 70, 239, 0.18);
+  border-color: rgba(217, 70, 239, 0.35);
+}
+
+/* Progress bar at top */
+.post-toc__progress-bar {
+  background: linear-gradient(90deg, var(--color-fuchsia), var(--color-fuchsia-light));
 }
 ```
 
