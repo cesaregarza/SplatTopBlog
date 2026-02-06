@@ -60,6 +60,7 @@ class TestRawHtmlSanitization(TestCase):
                 "title": "Winchart",
                 "src": "/static/applets/loser-winner.html",
                 "lazy_load": True,
+                "use_full_height": False,
                 "max_height": 560,
                 "style_overrides": "--applet-frame-height: 560px;",
             },
@@ -69,6 +70,7 @@ class TestRawHtmlSanitization(TestCase):
         self.assertIn("title=Winchart", output)
         self.assertIn("src=/static/applets/loser-winner.html", output)
         self.assertIn("lazy_load=true", output)
+        self.assertIn("full_height=false", output)
         self.assertIn("max_height=560", output)
 
 
@@ -139,6 +141,7 @@ class TestAppletEmbedBlock(TestCase):
                     "title": "Bad",
                     "src": "https://example.com/applet.html",
                     "lazy_load": True,
+                    "use_full_height": False,
                     "max_height": 600,
                     "style_overrides": "",
                 }
@@ -151,6 +154,7 @@ class TestAppletEmbedBlock(TestCase):
                 "title": "Good",
                 "src": "/static/applets/loser-winner.html",
                 "lazy_load": False,
+                "use_full_height": False,
                 "max_height": 420,
                 "style_overrides": "height: 420px;",
             }
@@ -158,19 +162,35 @@ class TestAppletEmbedBlock(TestCase):
         self.assertEqual(cleaned["src"], "/static/applets/loser-winner.html")
         self.assertEqual(cleaned["max_height"], 420)
 
-    def test_applet_embed_uses_default_max_height(self):
+    def test_applet_embed_max_height_is_optional(self):
         block = AppletEmbedBlock()
-        self.assertEqual(block.child_blocks["max_height"].meta.default, 700)
+        self.assertIsNone(block.child_blocks["max_height"].meta.default)
 
-    def test_applet_embed_blank_max_height_stays_unset(self):
+    def test_applet_embed_missing_max_height_stays_unset(self):
         block = AppletEmbedBlock()
         cleaned = block.clean(
             {
-                "title": "Auto Height",
+                "title": "Default Height",
                 "src": "/static/applets/loser-winner.html",
                 "lazy_load": True,
+                "use_full_height": False,
+                "max_height": None,
+                "style_overrides": "",
+            }
+        )
+        self.assertIsNone(cleaned["max_height"])
+
+    def test_applet_embed_full_height_allows_uncapped_resize(self):
+        block = AppletEmbedBlock()
+        cleaned = block.clean(
+            {
+                "title": "Full Height",
+                "src": "/static/applets/loser-winner.html",
+                "lazy_load": True,
+                "use_full_height": True,
                 "max_height": None,
                 "style_overrides": "",
             }
         )
         self.assertIsNone(cleaned.get("max_height"))
+        self.assertTrue(cleaned.get("use_full_height"))

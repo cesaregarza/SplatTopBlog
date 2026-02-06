@@ -1086,7 +1086,8 @@ pre code {
     display: block;
     width: 100%;
     max-width: 100%;
-    height: var(--applet-frame-height, 700px);
+    height: auto;
+    min-height: var(--applet-frame-height, 0px);
     margin: 1.5rem 0;
     border: 0;
     border-radius: 16px;
@@ -1095,6 +1096,11 @@ pre code {
     overflow: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
+}
+
+.applet-frame[data-applet-full-height="true"],
+.post-content iframe[src^="/static/applets/"][data-applet-full-height="true"] {
+    min-height: 0;
 }
 
 .applet-frame::-webkit-scrollbar,

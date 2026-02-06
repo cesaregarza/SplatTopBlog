@@ -52,8 +52,6 @@
       .status {
         color: var(--muted);
         font-size: 14px;
-        flex: 1 1 300px;
-        min-width: 240px;
         max-width: 480px;
         margin-left: auto;
         text-align: right;
@@ -190,8 +188,11 @@
           min-width: 0;
           text-align: left;
           white-space: normal;
-          overflow: visible;
-          text-overflow: clip;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
           line-height: 1.4;
         }
       }
@@ -355,17 +356,17 @@
         function layoutSpec(name) {
           if (name === "narrow") {
             const W = 480;
-            const H = 720;
+            const H = 620;
             const xs = linspace4(80, 400);
-            const yTop = 170;
-            const yBot = 530;
-            const subtitleY = 680;
+            const yTop = 150;
+            const yBot = 430;
+            const subtitleY = 590;
 
             return {
               name,
               viewBox: `0 0 ${W} ${H}`,
-              labelB: { x: W / 2, y: 60 },
-              labelA: { x: W / 2, y: 660 },
+              labelB: { x: W / 2, y: 56 },
+              labelA: { x: W / 2, y: 520 },
               subtitle: { x: W / 2, y: subtitleY },
               posB: xs.map((x) => ({ x, y: yTop })),
               posA: xs.map((x) => ({ x, y: yBot })),

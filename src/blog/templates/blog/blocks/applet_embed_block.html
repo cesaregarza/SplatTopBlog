@@ -3,7 +3,8 @@
         src="{{ value.src }}"
         class="applet-frame"
         data-applet-embed="true"
-        {% if value.max_height %}data-applet-max-height="{{ value.max_height }}"{% endif %}
+        {% if value.use_full_height %}data-applet-full-height="true"{% endif %}
+        {% if not value.use_full_height and value.max_height %}data-applet-max-height="{{ value.max_height }}"{% endif %}
         title="{{ value.title }}"
         loading="{% if value.lazy_load %}lazy{% else %}eager{% endif %}"
         referrerpolicy="strict-origin-when-cross-origin"

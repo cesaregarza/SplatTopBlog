@@ -138,6 +138,7 @@ def _render_block(block):
         title = _escape_tag_value(_struct_value_get(value, "title", ""))
         src = _escape_tag_value(_struct_value_get(value, "src", ""))
         lazy = "true" if _struct_value_get(value, "lazy_load", True) else "false"
+        full_height = "true" if _struct_value_get(value, "use_full_height", False) else "false"
         raw_max_height = _struct_value_get(value, "max_height", "")
         max_height = _escape_tag_value(
             "" if raw_max_height in ("", None) else str(raw_max_height)
@@ -145,7 +146,7 @@ def _render_block(block):
         style = _escape_tag_value(_struct_value_get(value, "style_overrides", ""))
         return (
             "[Applet; "
-            f"title={title}; src={src}; lazy_load={lazy}; "
+            f"title={title}; src={src}; lazy_load={lazy}; full_height={full_height}; "
             f"max_height={max_height}; style={style}]"
         )
 

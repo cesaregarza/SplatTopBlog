@@ -117,12 +117,16 @@ class AppletEmbedBlock(blocks.StructBlock):
         default=True,
         help_text="Lazy-load the iframe (recommended). Disable only when immediate load is required.",
     )
+    use_full_height = blocks.BooleanBlock(
+        required=False,
+        default=False,
+        help_text="Ignore max height and auto-resize iframe to full applet content height.",
+    )
     max_height = blocks.IntegerBlock(
         required=False,
-        default=700,
         min_value=120,
         help_text=(
-            "Optional maximum iframe height (px, defaults to 700). "
+            "Optional maximum iframe height (px). "
             "If applet content exceeds this, it scrolls inside the frame."
         ),
     )
