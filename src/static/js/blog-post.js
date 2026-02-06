@@ -744,6 +744,10 @@
 
         const termEl = tooltip.querySelector(".glossary-tooltip__term");
         const defEl = tooltip.querySelector(".glossary-tooltip__def");
+        const normalizeLatexInput = (input) =>
+          input
+            .replace(/[\u2018\u2019]/g, "'")
+            .replace(/[\u201c\u201d]/g, '"');
         const katexOptions = {
           delimiters: [
             { left: "[latex]", right: "[/latex]", display: true },
@@ -753,6 +757,7 @@
             { left: "$", right: "$", display: false },
           ],
           throwOnError: false,
+          preProcess: normalizeLatexInput,
         };
 
         let activeTarget = null;

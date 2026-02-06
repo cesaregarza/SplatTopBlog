@@ -10,6 +10,11 @@
   onReady(() => {
     if (!window.renderMathInElement) return;
 
+    const normalizeLatexInput = (input) =>
+      input
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201c\u201d]/g, '"');
+
     const options = {
       delimiters: [
         { left: "[latex]", right: "[/latex]", display: true },
@@ -20,6 +25,7 @@
       ],
       ignoredClasses: ["latex-block"],
       throwOnError: false,
+      preProcess: normalizeLatexInput,
     };
 
     const renderLatexBlocks = (el) => {
@@ -30,7 +36,7 @@
         const tex = block.textContent.trim();
         if (!tex) return;
         try {
-          window.katex.render(tex, block, {
+          window.katex.render(normalizeLatexInput(tex), block, {
             displayMode: true,
             throwOnError: false,
           });

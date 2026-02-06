@@ -19,19 +19,21 @@ class FrontendSecurityHeadersMiddleware:
             return response
 
         csp_header = "Content-Security-Policy" if self.enforce_csp else "Content-Security-Policy-Report-Only"
-        csp_policy = (
-            "default-src 'self'; "
-            "base-uri 'self'; "
-            "object-src 'none'; "
-            "frame-ancestors 'self'; "
-            "img-src 'self' data: https:; "
-            "font-src 'self' data: https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "script-src 'self' https://cdn.jsdelivr.net; "
-            "connect-src 'self'; "
-            "form-action 'self'; "
-            "upgrade-insecure-requests"
-        )
+        csp_directives = [
+            "default-src 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+            "frame-ancestors 'self'",
+            "img-src 'self' data: https:",
+            "font-src 'self' data: https://cdn.jsdelivr.net",
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+            "script-src 'self' https://cdn.jsdelivr.net",
+            "connect-src 'self'",
+            "form-action 'self'",
+        ]
+        if self.enforce_csp:
+            csp_directives.append("upgrade-insecure-requests")
+        csp_policy = "; ".join(csp_directives)
         response.setdefault(csp_header, csp_policy)
         response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         return response

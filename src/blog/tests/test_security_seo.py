@@ -110,6 +110,10 @@ class TestFrontendSecurityHeadersMiddleware(TestCase):
         response = middleware(request)
         self.assertIn("Content-Security-Policy-Report-Only", response)
         self.assertIn("Permissions-Policy", response)
+        self.assertNotIn(
+            "upgrade-insecure-requests",
+            response["Content-Security-Policy-Report-Only"],
+        )
 
     def test_frontend_headers_skip_admin_routes(self):
         middleware = FrontendSecurityHeadersMiddleware(lambda request: HttpResponse("ok"))
@@ -124,6 +128,7 @@ class TestFrontendSecurityHeadersMiddleware(TestCase):
             request = RequestFactory().get("/blog/post/")
             response = middleware(request)
         self.assertIn("Content-Security-Policy", response)
+        self.assertIn("upgrade-insecure-requests", response["Content-Security-Policy"])
 
 
 class TestBlogPageModelFields(TestCase):
