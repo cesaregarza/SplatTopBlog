@@ -9,9 +9,9 @@
 
   const scheduleIdle = (fn) => {
     if ("requestIdleCallback" in window) {
-      window.requestIdleCallback(fn, { timeout: 2000 });
+      window.requestIdleCallback(fn, { timeout: 10000 });
     } else {
-      setTimeout(fn, 0);
+      setTimeout(fn, 1200);
     }
   };
 
@@ -474,13 +474,16 @@
       };
 
       let ticking = false;
+      let recomputeQueued = false;
+      let contentTop = 0;
+      let contentHeight = 0;
+      let viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      let headingPositions = [];
+
       const updateProgress = () => {
         if (!progressEl) return;
-        const top = content.offsetTop;
-        const height = content.offsetHeight;
-        const viewport = window.innerHeight;
-        const maxScroll = Math.max(1, height - viewport);
-        const scrollY = window.scrollY - top;
+        const maxScroll = Math.max(1, contentHeight - viewportHeight);
+        const scrollY = window.scrollY - contentTop;
         const progress = Math.min(1, Math.max(0, scrollY / maxScroll));
         progressEl.style.width = `${(progress * 100).toFixed(2)}%`;
       };
@@ -493,45 +496,75 @@
         return true;
       };
 
+      const recomputeLayoutMetrics = () => {
+        viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        contentTop = content.offsetTop;
+        contentHeight = content.offsetHeight;
+        headingPositions = [];
+        headings.forEach((heading) => {
+          if (!isHeadingVisible(heading)) return;
+          headingPositions.push({ id: heading.id, top: heading.offsetTop });
+        });
+      };
+
+      const findActiveHeadingId = (fromTop) => {
+        if (headingPositions.length === 0) {
+          return headings[0]?.id || "";
+        }
+        let low = 0;
+        let high = headingPositions.length - 1;
+        let currentId = headingPositions[0].id;
+        while (low <= high) {
+          const mid = (low + high) >> 1;
+          const entry = headingPositions[mid];
+          if (entry.top <= fromTop) {
+            currentId = entry.id;
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
+        }
+        return currentId;
+      };
+
       const onScroll = () => {
         if (ticking) return;
         ticking = true;
         window.requestAnimationFrame(() => {
           const fromTop = window.scrollY + 140;
-          let current = null;
-          for (const heading of headings) {
-            if (!isHeadingVisible(heading)) continue;
-            if (heading.offsetTop <= fromTop) {
-              current = heading;
-            } else if (current) {
-              break;
-            }
-          }
-          if (!current) {
-            current = headings.find(isHeadingVisible) || headings[0];
-          }
-          if (current) updateActive(current.id);
+          const activeId = findActiveHeadingId(fromTop);
+          if (activeId) updateActive(activeId);
           updateProgress();
           ticking = false;
         });
       };
 
+      const queueRecompute = () => {
+        if (recomputeQueued) return;
+        recomputeQueued = true;
+        window.requestAnimationFrame(() => {
+          recomputeQueued = false;
+          recomputeLayoutMetrics();
+          onScroll();
+        });
+      };
+
       window.addEventListener("scroll", onScroll, { passive: true });
-      window.addEventListener("load", onScroll);
-      const resizeObserver = "ResizeObserver" in window ? new ResizeObserver(onScroll) : null;
+      window.addEventListener("load", queueRecompute);
+      const resizeObserver = "ResizeObserver" in window ? new ResizeObserver(queueRecompute) : null;
       if (resizeObserver) resizeObserver.observe(content);
       content.querySelectorAll("details.collapsible-block").forEach((details) => {
-        details.addEventListener("toggle", onScroll);
+        details.addEventListener("toggle", queueRecompute);
       });
       const handleResize = () => {
-        onScroll();
+        queueRecompute();
         if (window.matchMedia("(min-width: 1100px)").matches) {
           closeDrawer();
         }
       };
 
       window.addEventListener("resize", handleResize);
-      handleResize();
+      queueRecompute();
 
       links.forEach((link) => {
         link.addEventListener("click", closeDrawer);
@@ -539,135 +572,143 @@
     }
 
     scheduleIdle(() => {
-      const wordRegex = /[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g;
-      const countWordsInString = (text) => (text.match(wordRegex) || []).length;
-      const mathCharsPerWord = 8;
-      const wordsPerMinute = 220;
+      const needsClientReadTimePass = (() => {
+        if (!readTimeEl) return false;
+        const mainText = readTimeEl.querySelector(".post-readtime__main")?.textContent || "";
+        const deepText = readTimeEl.querySelector(".post-readtime__deep")?.textContent || "";
+        if (mainText.includes("-- min") || deepText.includes("-- min")) return true;
+        return Array.from(content.querySelectorAll("[data-collapsible-readtime]")).some((label) =>
+          (label.textContent || "").includes("-- min")
+        );
+      })();
 
-      const countMathWords = (el) => {
-        const annotations = el.querySelectorAll("annotation[encoding='application/x-tex']");
-        let tex = "";
-        annotations.forEach((node) => {
-          if (node.textContent) tex += ` ${node.textContent}`;
-        });
-        if (!tex) {
-          tex = el.textContent || "";
-        }
-        const compact = tex.replace(/\\s+/g, "");
-        if (!compact) return 0;
-        return Math.max(1, Math.ceil(compact.length / mathCharsPerWord));
-      };
+      if (needsClientReadTimePass) {
+        const wordRegex = /[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g;
+        const countWordsInString = (text) => (text.match(wordRegex) || []).length;
+        const mathCharsPerWord = 8;
+        const wordsPerMinute = 220;
 
-      const countTableWords = (table) => {
-        let total = 0;
-        table.querySelectorAll("th, td").forEach((cell) => {
-          const text = (cell.textContent || "").trim();
-          const words = countWordsInString(text);
-          if (words === 0 && text.length > 0) {
-            total += 1;
-          } else {
-            total += words;
+        const countMathWords = (el) => {
+          const annotations = el.querySelectorAll("annotation[encoding='application/x-tex']");
+          let tex = "";
+          annotations.forEach((node) => {
+            if (node.textContent) tex += ` ${node.textContent}`;
+          });
+          if (!tex) {
+            tex = el.textContent || "";
           }
-        });
-        return total;
-      };
+          const compact = tex.replace(/\\s+/g, "");
+          if (!compact) return 0;
+          return Math.max(1, Math.ceil(compact.length / mathCharsPerWord));
+        };
 
-      const shouldSkip = (el) =>
-        el.matches("script, style, nav") ||
-        el.classList.contains("para-anchor") ||
-        el.classList.contains("post-toc") ||
-        el.classList.contains("post-sidebar") ||
-        el.classList.contains("glossary-data") ||
-        el.classList.contains("glossary-tooltip") ||
-        el.classList.contains("collapsible-block__readtime") ||
-        el.classList.contains("collapsible-block__icon") ||
-        el.classList.contains("copy-toast");
+        const countTableWords = (table) => {
+          let total = 0;
+          table.querySelectorAll("th, td").forEach((cell) => {
+            const text = (cell.textContent || "").trim();
+            const words = countWordsInString(text);
+            if (words === 0 && text.length > 0) {
+              total += 1;
+            } else {
+              total += words;
+            }
+          });
+          return total;
+        };
 
-      const collapsibleCounts = new Map();
+        const shouldSkip = (el) =>
+          el.matches("script, style, nav") ||
+          el.classList.contains("para-anchor") ||
+          el.classList.contains("post-toc") ||
+          el.classList.contains("post-sidebar") ||
+          el.classList.contains("glossary-data") ||
+          el.classList.contains("glossary-tooltip") ||
+          el.classList.contains("collapsible-block__readtime") ||
+          el.classList.contains("collapsible-block__icon") ||
+          el.classList.contains("copy-toast");
 
-      const countNode = (node) => {
-        if (!node) return { main: 0, deep: 0 };
-        if (node.nodeType === Node.TEXT_NODE) {
-          const words = countWordsInString(node.textContent || "");
-          return { main: words, deep: words };
-        }
-        if (node.nodeType !== Node.ELEMENT_NODE) {
-          return { main: 0, deep: 0 };
-        }
+        const collapsibleCounts = new Map();
 
-        const el = node;
-        if (shouldSkip(el)) {
-          return { main: 0, deep: 0 };
-        }
-
-        if (
-          el.classList.contains("katex") ||
-          el.classList.contains("katex-display") ||
-          el.classList.contains("latex-block")
-        ) {
-          const words = countMathWords(el);
-          return { main: words, deep: words };
-        }
-
-        if (el.tagName === "TABLE") {
-          const words = countTableWords(el);
-          return { main: words, deep: words };
-        }
-
-        if (el.tagName === "DETAILS" && el.classList.contains("collapsible-block")) {
-          const summary = el.querySelector(":scope > summary");
-          const contentEl = el.querySelector(":scope > .collapsible-block__content");
-          const summaryCounts = summary ? countNode(summary) : { main: 0, deep: 0 };
-          const contentCounts = contentEl ? countNode(contentEl) : { main: 0, deep: 0 };
-          const isOpen = el.hasAttribute("open");
-          const main = summaryCounts.main + (isOpen ? contentCounts.deep : 0);
-          const deep = summaryCounts.deep + contentCounts.deep;
-          if (contentEl) {
-            collapsibleCounts.set(el, contentCounts.deep);
+        const countNode = (node) => {
+          if (!node) return { main: 0, deep: 0 };
+          if (node.nodeType === Node.TEXT_NODE) {
+            const words = countWordsInString(node.textContent || "");
+            return { main: words, deep: words };
           }
+          if (node.nodeType !== Node.ELEMENT_NODE) {
+            return { main: 0, deep: 0 };
+          }
+
+          const el = node;
+          if (shouldSkip(el)) {
+            return { main: 0, deep: 0 };
+          }
+
+          if (
+            el.classList.contains("katex") ||
+            el.classList.contains("katex-display") ||
+            el.classList.contains("latex-block")
+          ) {
+            const words = countMathWords(el);
+            return { main: words, deep: words };
+          }
+
+          if (el.tagName === "TABLE") {
+            const words = countTableWords(el);
+            return { main: words, deep: words };
+          }
+
+          if (el.tagName === "DETAILS" && el.classList.contains("collapsible-block")) {
+            const summary = el.querySelector(":scope > summary");
+            const contentEl = el.querySelector(":scope > .collapsible-block__content");
+            const summaryCounts = summary ? countNode(summary) : { main: 0, deep: 0 };
+            const contentCounts = contentEl ? countNode(contentEl) : { main: 0, deep: 0 };
+            const isOpen = el.hasAttribute("open");
+            const main = summaryCounts.main + (isOpen ? contentCounts.deep : 0);
+            const deep = summaryCounts.deep + contentCounts.deep;
+            if (contentEl) {
+              collapsibleCounts.set(el, contentCounts.deep);
+            }
+            return { main, deep };
+          }
+
+          let main = 0;
+          let deep = 0;
+          el.childNodes.forEach((child) => {
+            const counts = countNode(child);
+            main += counts.main;
+            deep += counts.deep;
+          });
           return { main, deep };
-        }
+        };
 
-        let main = 0;
-        let deep = 0;
-        el.childNodes.forEach((child) => {
-          const counts = countNode(child);
-          main += counts.main;
-          deep += counts.deep;
-        });
-        return { main, deep };
-      };
+        const formatMinutes = (words) => {
+          const minutes = Math.max(1, Math.round(words / wordsPerMinute));
+          return `${minutes} min`;
+        };
 
-      const formatMinutes = (words) => {
-        const minutes = Math.max(1, Math.round(words / wordsPerMinute));
-        return `${minutes} min`;
-      };
-
-      if (readTimeEl) {
         const counts = countNode(content);
         const mainEl = readTimeEl.querySelector(".post-readtime__main");
         const deepEl = readTimeEl.querySelector(".post-readtime__deep");
         if (mainEl) mainEl.textContent = `Main path: ${formatMinutes(counts.main)}`;
         if (deepEl) deepEl.textContent = `With deep dives: ${formatMinutes(counts.deep)}`;
-      }
 
-      if (collapsibleCounts.size > 0) {
-        content.querySelectorAll(".collapsible-block__summary").forEach((summary) => {
-          const details = summary.closest("details");
-          if (!details) return;
-          const label = summary.querySelector("[data-collapsible-readtime]");
-          const words = collapsibleCounts.get(details);
-          if (label && typeof words === "number") {
-            label.textContent = formatMinutes(words);
-          }
-        });
+        if (collapsibleCounts.size > 0) {
+          content.querySelectorAll(".collapsible-block__summary").forEach((summary) => {
+            const details = summary.closest("details");
+            if (!details) return;
+            const label = summary.querySelector("[data-collapsible-readtime]");
+            const words = collapsibleCounts.get(details);
+            if (label && typeof words === "number") {
+              label.textContent = formatMinutes(words);
+            }
+          });
+        }
       }
 
       const glossaryTerms = new Map();
-      let glossaryAutoLink = false;
       const glossaryBlocks = content.querySelectorAll(".glossary-data");
       glossaryBlocks.forEach((block) => {
-        if (block.dataset.auto === "true") glossaryAutoLink = true;
         block.querySelectorAll(".glossary-data__entry").forEach((entry) => {
           const term = (entry.dataset.term || "").trim();
           const definition = (entry.dataset.definition || "").trim();
@@ -689,6 +730,8 @@
 
       const bindGlossaryTerms = () => {
         if (glossaryTerms.size === 0) return;
+        const glossaryButtons = Array.from(content.querySelectorAll(".glossary-term"));
+        if (glossaryButtons.length === 0) return;
 
         const tooltip = document.createElement("div");
         tooltip.className = "glossary-tooltip";
@@ -749,11 +792,6 @@
           activeTarget = null;
         };
 
-        const isInteractive = (node) => node.closest("a, button, .glossary-term");
-
-        const manualPattern = /\[\[([^\]]+)\]\]/g;
-        const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
-
         const wireGlossaryButton = (button) => {
           if (!button || button.dataset.glossaryWired === "true") return;
           button.dataset.glossaryWired = "true";
@@ -792,107 +830,7 @@
           });
         };
 
-        const makeButton = (displayText, key) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "glossary-term";
-          button.dataset.termKey = key;
-          button.textContent = displayText;
-          wireGlossaryButton(button);
-          return button;
-        };
-
-        const processTextNodes = (root, handler) => {
-          const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-            acceptNode(node) {
-              if (!node.parentElement) return NodeFilter.FILTER_REJECT;
-              if (!node.textContent || !node.textContent.trim()) return NodeFilter.FILTER_REJECT;
-              const parent = node.parentElement;
-              if (
-                parent.closest(
-                  "script, style, pre, code, a, button, .glossary-data, .glossary-tooltip, .post-toc, .post-sidebar"
-                )
-              ) {
-                return NodeFilter.FILTER_REJECT;
-              }
-              return NodeFilter.FILTER_ACCEPT;
-            },
-          });
-          const nodes = [];
-          while (walker.nextNode()) {
-            nodes.push(walker.currentNode);
-          }
-          nodes.forEach(handler);
-        };
-
-        processTextNodes(content, (node) => {
-          const text = node.textContent;
-          if (!text.includes("[[")) return;
-          manualPattern.lastIndex = 0;
-          const frag = document.createDocumentFragment();
-          let lastIndex = 0;
-          let match;
-          while ((match = manualPattern.exec(text)) !== null) {
-            const raw = match[1].trim();
-            const parts = raw.split("|");
-            const termRaw = (parts[0] || "").trim();
-            const labelRaw = (parts[1] || "").trim();
-            const termKey = termRaw.toLowerCase();
-            const entry = glossaryTerms.get(termKey);
-            const start = match.index;
-            if (start > lastIndex) {
-              frag.appendChild(document.createTextNode(text.slice(lastIndex, start)));
-            }
-            if (entry) {
-              const label = labelRaw || entry.term;
-              frag.appendChild(makeButton(label, termKey));
-            } else {
-              frag.appendChild(document.createTextNode(match[0]));
-            }
-            lastIndex = start + match[0].length;
-          }
-          if (lastIndex < text.length) {
-            frag.appendChild(document.createTextNode(text.slice(lastIndex)));
-          }
-          node.parentNode.replaceChild(frag, node);
-        });
-
-        if (glossaryAutoLink) {
-          const terms = Array.from(glossaryTerms.values())
-            .map((entry) => entry.term)
-            .sort((a, b) => b.length - a.length);
-          if (terms.length > 0) {
-            const pattern = new RegExp(`\\\\b(${terms.map(escapeRegExp).join("|")})\\\\b`, "gi");
-            processTextNodes(content, (node) => {
-              const text = node.textContent;
-              pattern.lastIndex = 0;
-              if (!pattern.test(text)) return;
-              pattern.lastIndex = 0;
-              const frag = document.createDocumentFragment();
-              let lastIndex = 0;
-              text.replace(pattern, (match, termMatch, offset) => {
-                if (offset > lastIndex) {
-                  frag.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
-                }
-                const key = termMatch.toLowerCase();
-                const entry = glossaryTerms.get(key);
-                if (entry && !isInteractive(node.parentElement)) {
-                  frag.appendChild(makeButton(match, key));
-                } else {
-                  frag.appendChild(document.createTextNode(match));
-                }
-                lastIndex = offset + match.length;
-                return match;
-              });
-              if (lastIndex < text.length) {
-                frag.appendChild(document.createTextNode(text.slice(lastIndex)));
-              }
-              node.parentNode.replaceChild(frag, node);
-            });
-          }
-        }
-
-        content.querySelectorAll(".glossary-term").forEach((button) => {
+        glossaryButtons.forEach((button) => {
           if (!button.dataset.termKey) {
             const key = (button.textContent || "").trim().toLowerCase();
             if (glossaryTerms.has(key)) {

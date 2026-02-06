@@ -1,14 +1,19 @@
+import hashlib
+import json
+
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import models
+from django.dispatch import receiver
 from wagtail import blocks
 from wagtail.admin.panels import FieldPanel, HelpPanel
 from wagtail.fields import StreamField
 from wagtail.images.blocks import ImageChooserBlock
 from wagtail.models import Page
+from wagtail.signals import page_published
 from wagtailmarkdown.blocks import MarkdownBlock
 
-from .post_processing import render_blog_body
+from .post_processing import format_minutes, render_blog_body
 
 
 class CodeBlock(blocks.StructBlock):
@@ -258,6 +263,40 @@ class BlogPage(Page):
         blank=True,
         use_json_field=True,
     )
+    body_render_cache_key = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        editable=False,
+    )
+    body_rendered_html = models.TextField(
+        blank=True,
+        default="",
+        editable=False,
+    )
+    body_rendered_toc_items = models.JSONField(
+        blank=True,
+        default=list,
+        editable=False,
+    )
+    body_rendered_toc_crumb = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        editable=False,
+    )
+    body_rendered_readtime_main = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        editable=False,
+    )
+    body_rendered_readtime_deep = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        editable=False,
+    )
 
     content_panels = Page.content_panels + [
         FieldPanel("date"),
@@ -277,10 +316,75 @@ class BlogPage(Page):
     parent_page_types = ["blog.BlogIndexPage"]
     subpage_types = []
 
+    def _compute_body_render_cache_key(self):
+        raw_data = getattr(self.body, "raw_data", self.body)
+        try:
+            payload = json.dumps(
+                raw_data if raw_data is not None else [],
+                ensure_ascii=True,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        except TypeError:
+            payload = json.dumps(str(raw_data), ensure_ascii=True)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def _render_context_from_cache(self):
+        fallback_readtime = format_minutes(0)
+        return {
+            "body_html": self.body_rendered_html,
+            "toc_items": self.body_rendered_toc_items or [],
+            "toc_crumb": self.body_rendered_toc_crumb or "",
+            "readtime_main": self.body_rendered_readtime_main or fallback_readtime,
+            "readtime_deep": self.body_rendered_readtime_deep or fallback_readtime,
+        }
+
+    def _persist_render_cache(self, body_cache_key, rendered):
+        if not self.pk:
+            return
+        update_fields = {
+            "body_render_cache_key": body_cache_key,
+            "body_rendered_html": rendered.get("body_html", ""),
+            "body_rendered_toc_items": rendered.get("toc_items", []) or [],
+            "body_rendered_toc_crumb": rendered.get("toc_crumb", ""),
+            "body_rendered_readtime_main": rendered.get("readtime_main", ""),
+            "body_rendered_readtime_deep": rendered.get("readtime_deep", ""),
+        }
+        BlogPage.objects.filter(pk=self.pk).update(**update_fields)
+        for key, value in update_fields.items():
+            setattr(self, key, value)
+
+    def get_render_context(self, request=None):
+        body_cache_key = self._compute_body_render_cache_key()
+        raw_data = getattr(self.body, "raw_data", self.body)
+        body_has_content = bool(raw_data)
+        has_usable_cache = bool(self.body_rendered_html) or not body_has_content
+        if self.body_render_cache_key == body_cache_key and has_usable_cache:
+            return self._render_context_from_cache()
+
+        rendered = render_blog_body(self.body)
+        is_admin_path = bool(request and (getattr(request, "path", "") or "").startswith("/admin/"))
+        if self.live and self.pk and not is_admin_path:
+            self._persist_render_cache(body_cache_key, rendered)
+        return rendered
+
     def get_context(self, request):
         context = super().get_context(request)
-        context.update(render_blog_body(self.body))
+        context.update(self.get_render_context(request=request))
         return context
 
     class Meta:
         verbose_name = "Blog Post"
+
+
+@receiver(page_published)
+def precompute_blog_body_render_cache(sender, **kwargs):
+    instance = kwargs.get("instance")
+    if instance is None:
+        return
+    specific = getattr(instance, "specific", instance)
+    if not isinstance(specific, BlogPage):
+        return
+    rendered = render_blog_body(specific.body)
+    body_cache_key = specific._compute_body_render_cache_key()
+    specific._persist_render_cache(body_cache_key, rendered)

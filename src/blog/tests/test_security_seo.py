@@ -6,11 +6,12 @@ from unittest.mock import Mock, patch
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.test import RequestFactory
+from django.test import TestCase as DjangoTestCase
 from wagtail.models import PageViewRestriction
 
 from blog.markdown_extensions.random_choice import RandomChoicePreprocessor
 from blog.middleware import FrontendSecurityHeadersMiddleware
-from blog.models import AppletEmbedBlock, BlogPage
+from blog.models import AppletEmbedBlock, BlogPage, precompute_blog_body_render_cache
 from blog.robots import robots_txt
 from blog.templatetags.blog_sanitize import sanitize_html
 from blog.views import _enforce_view_restrictions, _render_block
@@ -130,6 +131,62 @@ class TestBlogPageModelFields(TestCase):
         field_names = {field.name for field in BlogPage._meta.get_fields()}
         self.assertIn("featured_image", field_names)
         self.assertIn("social_image", field_names)
+
+
+class TestBlogPageRenderCaching(DjangoTestCase):
+    def test_cached_render_context_skips_recompute(self):
+        page = BlogPage(title="Cache Hit", slug="cache-hit", body=[])
+        cache_key = page._compute_body_render_cache_key()
+        page.body_render_cache_key = cache_key
+        page.body_rendered_html = "<p>cached</p>"
+        page.body_rendered_toc_items = [{"id": "h-intro", "text": "Intro", "level": "h1"}]
+        page.body_rendered_toc_crumb = "Intro"
+        page.body_rendered_readtime_main = "2 min"
+        page.body_rendered_readtime_deep = "3 min"
+
+        with patch("blog.models.render_blog_body") as render_mock:
+            rendered = page.get_render_context()
+
+        render_mock.assert_not_called()
+        self.assertEqual(rendered["body_html"], "<p>cached</p>")
+        self.assertEqual(rendered["readtime_main"], "2 min")
+        self.assertEqual(rendered["readtime_deep"], "3 min")
+
+    def test_cache_miss_recomputes_render_context(self):
+        page = BlogPage(title="Cache Miss", slug="cache-miss", body=[])
+        payload = {
+            "body_html": "<p>fresh</p>",
+            "toc_items": [],
+            "toc_crumb": "",
+            "readtime_main": "1 min",
+            "readtime_deep": "1 min",
+        }
+        with patch("blog.models.render_blog_body", return_value=payload) as render_mock:
+            rendered = page.get_render_context()
+
+        render_mock.assert_called_once()
+        self.assertEqual(rendered, payload)
+
+    def test_publish_signal_precomputes_cache(self):
+        page = BlogPage(title="Publish", slug="publish", body=[])
+        page.pk = 42
+        page.live = True
+        payload = {
+            "body_html": "<p>published</p>",
+            "toc_items": [{"id": "h-a", "text": "A", "level": "h1"}],
+            "toc_crumb": "A",
+            "readtime_main": "4 min",
+            "readtime_deep": "6 min",
+        }
+
+        with patch("blog.models.render_blog_body", return_value=payload) as render_mock, patch(
+            "blog.models.BlogPage.objects.filter"
+        ) as filter_mock:
+            precompute_blog_body_render_cache(sender=BlogPage, instance=page)
+
+        render_mock.assert_called_once()
+        filter_mock.assert_called_once_with(pk=42)
+        filter_mock.return_value.update.assert_called_once()
 
 
 class TestAppletEmbedBlock(TestCase):
