@@ -8,9 +8,11 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from wagtail import urls as wagtail_urls
 from wagtail.admin import urls as wagtailadmin_urls
+from wagtail.contrib.sitemaps.views import sitemap
 from wagtail.documents import urls as wagtaildocs_urls
 
 from blog import views as blog_views
+from blog.feeds import BlogAtomFeed, BlogFeed
 
 urlpatterns = [
     path("django-admin/", admin.site.urls),
@@ -18,6 +20,9 @@ urlpatterns = [
     path("documents/", include(wagtaildocs_urls)),
     path("health/", include("health_check.urls")),
     re_path(r"^(?P<page_path>.+)\.md$", blog_views.blog_page_markdown),
+    path("feed/", BlogFeed(), name="blog-feed"),
+    path("feed/atom/", BlogAtomFeed(), name="blog-atom-feed"),
+    path("sitemap.xml", sitemap, name="sitemap"),
     # Wagtail pages - must be last
     path("", include(wagtail_urls)),
 ]
