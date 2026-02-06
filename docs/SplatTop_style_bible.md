@@ -834,7 +834,132 @@ transition, duration-300
 
 ---
 
+## Blog-Specific Components
+
+The SplatTop Blog (`blog.splat.top`) is a Wagtail CMS site that extends the core design system with blog-specific patterns.
+
+### Blog Typography
+
+| Element | Size | Weight | Color |
+|---------|------|--------|-------|
+| Post title | `2.2rem` (mobile: `1.6rem`) | 800 | `#ffffff` |
+| Post body | `1.05rem` | 400 | `#c9d1d9` (secondary text) |
+| Post body headings (h1-h3) | `1.7rem` / `1.4rem` / `1.15rem` | 700 | `#ffffff` |
+| Code inline | `0.88em` | 400 | `#e879f9` (fuchsia lighter) |
+| Code blocks | `0.9rem` | 400 | `#c9d1d9` on `rgba(0,0,0,0.35)` |
+| Blockquote | `1.05rem` italic | 400 | `#c9d1d9` with `3px` left border `#ab5ab7` |
+
+### Post Cards (Blog Index)
+
+```css
+.post-card {
+  background: var(--color-surface-subtle);           /* rgba(255,255,255,0.022) */
+  border: 1px solid var(--border-soft);              /* rgba(255,255,255,0.08) */
+  border-radius: 16px;
+  box-shadow: var(--shadow-panel);                   /* 0 10px 26px rgba(1,4,9,0.45) */
+  transition: transform 260ms ease, box-shadow 260ms ease;
+}
+
+.post-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-elevated);                /* 0 18px 42px rgba(1,4,9,0.65) */
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .post-card { transition: none; }
+  .post-card:hover { transform: none; }
+}
+```
+
+### Collapsible Blocks
+
+Used for expandable content sections (Side Quests, Deep Dives, etc.)
+
+| Category | Accent Color | Background |
+|----------|-------------|------------|
+| Default | `#ab5ab7` (purple) | `rgba(171,90,183,0.06)` |
+| Deep Dive | `#3b82f6` (blue) | `rgba(59,130,246,0.06)` |
+| Side Quest | `#f59e0b` (amber) | `rgba(245,158,11,0.06)` |
+| Technical | `#10b981` (emerald) | `rgba(16,185,129,0.06)` |
+
+```css
+.collapsible-block {
+  border: 1px solid rgba(171, 90, 183, 0.2);
+  border-radius: 12px;
+  margin: 1.5rem 0;
+}
+
+.collapsible-block summary {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+```
+
+### Key Takeaway Callouts
+
+Highlighted callout boxes for important information.
+
+| Color | Left Border | Background | Icon Area |
+|-------|------------|------------|-----------|
+| Blue (default) | `#3b82f6` | `rgba(59,130,246,0.08)` | `rgba(59,130,246,0.15)` |
+| Purple | `#ab5ab7` | `rgba(171,90,183,0.08)` | `rgba(171,90,183,0.15)` |
+| Green | `#10b981` | `rgba(16,185,129,0.08)` | `rgba(16,185,129,0.15)` |
+| Amber | `#f59e0b` | `rgba(245,158,11,0.08)` | `rgba(245,158,11,0.15)` |
+| Red | `#ef4444` | `rgba(239,68,68,0.08)` | `rgba(239,68,68,0.15)` |
+
+### Glossary Tooltips
+
+```css
+.glossary-term {
+  color: var(--color-fuchsia-lighter);               /* #e879f9 */
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.glossary-tooltip {
+  background: var(--color-surface-hint);             /* rgba(13,17,23,0.74) */
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  backdrop-filter: blur(16px);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  max-width: 320px;
+}
+```
+
+### Table of Contents Sidebar
+
+```css
+.toc-sidebar {
+  position: sticky;
+  top: 5rem;
+  max-height: calc(100vh - 7rem);
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+
+.toc-link {
+  color: var(--color-text-muted);                    /* #8b949e */
+  transition: color 150ms ease;
+}
+
+.toc-link:hover,
+.toc-link.active {
+  color: var(--color-purple-light);                  /* #c183e1 */
+}
+```
+
+---
+
 ## File Locations
+
+### SplatTop Main App (comp.splat.top)
 
 | File | Purpose |
 |------|---------|
@@ -845,3 +970,15 @@ transition, duration-300
 | `src/react_app/src/components/player_components/xchart.css` | Chart color palettes |
 | `src/react_app/src/hooks/useCrackleEffect.js` | Electric spark animation hook |
 | `src/react_app/src/assets/fonts/` | FiraMono font files |
+
+### SplatTop Blog (blog.splat.top)
+
+| File | Purpose |
+|------|---------|
+| `src/static/css/site.css` | All blog styles, CSS custom properties |
+| `src/templates/base.html` | Base template with header, footer, KaTeX |
+| `src/blog/templates/blog/blog_page.html` | Blog post template with TOC sidebar |
+| `src/blog/templates/blog/blog_index_page.html` | Blog listing with post card grid |
+| `src/blog/models.py` | StreamField block definitions |
+| `src/blog/post_processing.py` | HTML post-processing (TOC, glossary, images) |
+| `docs/SplatTop_style_bible.md` | This file |
