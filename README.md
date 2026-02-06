@@ -18,8 +18,12 @@ make superuser
 make dev
 
 # Visit the site
-open http://localhost:8000        # Frontend
-open http://localhost:8000/admin  # Wagtail admin
+# macOS:
+open http://localhost:8000
+open http://localhost:8000/admin
+# Linux:
+xdg-open http://localhost:8000
+xdg-open http://localhost:8000/admin
 ```
 
 ## Available Commands
@@ -83,9 +87,15 @@ cp .env.local .env
 | `DEBUG` | Enable debug mode | `true` |
 | `DJANGO_SECRET_KEY` | Django secret key | (required in prod) |
 | `ALLOWED_HOSTS` | Comma-separated hosts | `localhost,127.0.0.1` |
+| `CSRF_TRUSTED_ORIGINS` | Comma-separated trusted origins | `http://localhost:8000` |
 | `DATABASE_URL` | PostgreSQL connection string | (empty = SQLite) |
+| `USE_SPACES` | Use DO Spaces/S3 for media storage | `false` |
+| `WAGTAILADMIN_BASE_URL` | Canonical admin URL | `http://localhost:8000` |
+| `CSP_ENFORCE` | Enforce CSP (otherwise report-only) | `false` |
 
 **Note:** When `DATABASE_URL` is not set, the app uses SQLite, which is perfect for local development.
+
+In non-debug mode, the app now defaults to stricter security behavior (SSL redirect, secure cookies, HSTS, etc.) and fails fast if a weak or missing `DJANGO_SECRET_KEY` is detected.
 
 ## Production Deployment
 

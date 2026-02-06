@@ -1,0 +1,12 @@
+{% if value.src %}
+    <iframe
+        src="{{ value.src }}"
+        class="applet-frame"
+        data-applet-embed="true"
+        data-applet-max-height="{{ value.max_height|default:700 }}"
+        title="{{ value.title }}"
+        loading="{% if value.lazy_load %}lazy{% else %}eager{% endif %}"
+        referrerpolicy="strict-origin-when-cross-origin"
+        {% if value.style_overrides %}style="{{ value.style_overrides }}"{% endif %}
+    ></iframe>
+{% endif %}

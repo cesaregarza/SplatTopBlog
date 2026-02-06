@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import models
 from wagtail import blocks
@@ -8,6 +9,7 @@ from wagtail.models import Page
 from wagtailmarkdown.blocks import MarkdownBlock
 
 from .post_processing import render_blog_body
+
 
 class CodeBlock(blocks.StructBlock):
     language = blocks.CharBlock(
@@ -101,6 +103,52 @@ class KeyTakeawayBlock(blocks.StructBlock):
         label = "Key Takeaway"
 
 
+class AppletEmbedBlock(blocks.StructBlock):
+    title = blocks.CharBlock(
+        required=True,
+        help_text="Accessible title for the iframe content.",
+    )
+    src = blocks.CharBlock(
+        required=True,
+        help_text="Path to an applet under /static/applets/ (for example /static/applets/loser-winner.html).",
+    )
+    lazy_load = blocks.BooleanBlock(
+        required=False,
+        default=True,
+        help_text="Lazy-load the iframe (recommended). Disable only when immediate load is required.",
+    )
+    max_height = blocks.IntegerBlock(
+        required=False,
+        default=700,
+        min_value=120,
+        help_text=(
+            "Optional maximum iframe height (px, defaults to 700). "
+            "If applet content exceeds this, it scrolls inside the frame."
+        ),
+    )
+    style_overrides = blocks.TextBlock(
+        required=False,
+        help_text="Optional inline style overrides for the iframe element (CSS declarations).",
+    )
+
+    def clean(self, value):
+        cleaned = super().clean(value)
+        if cleaned.get("max_height") in (None, ""):
+            cleaned["max_height"] = 700
+        src = (cleaned.get("src") or "").strip()
+        if not src.startswith("/static/applets/"):
+            raise ValidationError(
+                {"src": "Applet source must start with /static/applets/."}
+            )
+        if src.startswith("//"):
+            raise ValidationError({"src": "Protocol-relative URLs are not allowed."})
+        return cleaned
+
+    class Meta:
+        icon = "media"
+        label = "Applet Embed"
+
+
 # Base blocks that can be used both at top-level and inside collapsible sections
 BASE_BLOCKS = [
     ("markdown", MarkdownBlock()),
@@ -112,6 +160,7 @@ BASE_BLOCKS = [
     ("quote", blocks.TextBlock()),
     ("glossary", GlossaryBlock()),
     ("takeaway", KeyTakeawayBlock()),
+    ("applet_embed", AppletEmbedBlock()),
 ]
 
 
@@ -182,6 +231,22 @@ class BlogPage(Page):
     """Individual blog post page."""
 
     date = models.DateField("Post date", null=True, blank=True)
+    featured_image = models.ForeignKey(
+        "wagtailimages.Image",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Optional hero/share image for the post.",
+    )
+    social_image = models.ForeignKey(
+        "wagtailimages.Image",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Optional social preview image override (OpenGraph/Twitter cards).",
+    )
     abstract = models.TextField(
         blank=True,
         help_text="Optional abstract/summary used for OpenGraph and meta descriptions.",
@@ -194,10 +259,12 @@ class BlogPage(Page):
 
     content_panels = Page.content_panels + [
         FieldPanel("date"),
+        FieldPanel("featured_image"),
         FieldPanel("body"),
     ]
 
     promote_panels = Page.promote_panels + [
+        FieldPanel("social_image"),
         FieldPanel("abstract"),
         HelpPanel(
             template="blog/admin/share_preview_panel.html",

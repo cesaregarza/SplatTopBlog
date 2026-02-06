@@ -1,6 +1,29 @@
 {% extends "base.html" %}
 {% load wagtailcore_tags wagtailimages_tags %}
 
+{% block canonical_link %}
+    {% if page_obj and page_obj.number > 1 %}
+        <link rel="canonical" href="{{ request.build_absolute_uri }}">
+    {% else %}
+        {{ block.super }}
+    {% endif %}
+{% endblock %}
+
+{% block extra_head %}
+    {% if is_paginated %}
+        {% if page_obj.has_previous %}
+            {% if page_obj.previous_page_number == 1 %}
+                <link rel="prev" href="{{ page.full_url }}">
+            {% else %}
+                <link rel="prev" href="{{ page.full_url }}?page={{ page_obj.previous_page_number }}">
+            {% endif %}
+        {% endif %}
+        {% if page_obj.has_next %}
+            <link rel="next" href="{{ page.full_url }}?page={{ page_obj.next_page_number }}">
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 <section class="page-hero">
     <h1 class="page-title">{{ page.title }}</h1>
@@ -23,8 +46,8 @@
                     <span class="post-card__meta">{{ post.date }}</span>
                 {% endif %}
                 <h2 class="post-card__title"><a href="{% pageurl post %}">{{ post.title }}</a></h2>
-                {% if post.intro %}
-                    <p class="post-card__excerpt">{{ post.intro }}</p>
+                {% if post.abstract %}
+                    <p class="post-card__excerpt">{{ post.abstract }}</p>
                 {% elif post.search_description %}
                     <p class="post-card__excerpt">{{ post.search_description }}</p>
                 {% endif %}

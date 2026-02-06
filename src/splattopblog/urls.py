@@ -28,8 +28,6 @@ urlpatterns = [
     path("feed/", BlogFeed(), name="blog-feed"),
     path("feed/atom/", BlogAtomFeed(), name="blog-atom-feed"),
     path("sitemap.xml", sitemap, name="sitemap"),
-    # Wagtail pages - must be last
-    path("", include(wagtail_urls)),
 ]
 
 if settings.DEBUG or settings.SERVE_MEDIA:
@@ -37,3 +35,8 @@ if settings.DEBUG or settings.SERVE_MEDIA:
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Wagtail pages - must be last, after any debug/static routes.
+urlpatterns += [
+    path("", include(wagtail_urls)),
+]

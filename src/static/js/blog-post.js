@@ -38,6 +38,159 @@
 
     if (!content) return;
 
+    const setupAppletFrames = () => {
+      const frames = Array.from(content.querySelectorAll("iframe.applet-frame"));
+      if (frames.length === 0) return;
+
+      const ensureEmbeddedStyling = (doc) => {
+        if (!doc || !doc.documentElement) return;
+        doc.documentElement.classList.add("is-embedded");
+
+        const styleId = "__applet_embed_scrollbar_theme";
+        if (doc.getElementById(styleId)) return;
+        const style = doc.createElement("style");
+        style.id = styleId;
+        style.textContent = `
+          :root.is-embedded,
+          :root.is-embedded body {
+            overflow: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            scrollbar-color: rgba(217, 70, 239, 0.92) rgba(15, 23, 42, 0.36);
+          }
+
+          :root.is-embedded:hover,
+          :root.is-embedded:focus-within,
+          :root.is-embedded body:hover,
+          :root.is-embedded body:focus-within {
+            scrollbar-width: thin;
+          }
+
+          :root.is-embedded::-webkit-scrollbar,
+          :root.is-embedded body::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+          }
+
+          :root.is-embedded:hover::-webkit-scrollbar,
+          :root.is-embedded:focus-within::-webkit-scrollbar,
+          :root.is-embedded body:hover::-webkit-scrollbar,
+          :root.is-embedded body:focus-within::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+          }
+
+          :root.is-embedded::-webkit-scrollbar-track,
+          :root.is-embedded body::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.32);
+            border-radius: 9999px;
+          }
+
+          :root.is-embedded::-webkit-scrollbar-thumb,
+          :root.is-embedded body::-webkit-scrollbar-thumb {
+            background: linear-gradient(
+              180deg,
+              rgba(217, 70, 239, 0.94),
+              rgba(171, 90, 183, 0.88)
+            );
+            border: 1px solid rgba(15, 23, 42, 0.65);
+            border-radius: 9999px;
+          }
+
+          :root.is-embedded body * {
+            scrollbar-width: none;
+            scrollbar-color: rgba(217, 70, 239, 0.92) rgba(15, 23, 42, 0.36);
+          }
+
+          :root.is-embedded body *:hover,
+          :root.is-embedded body *:focus,
+          :root.is-embedded body *:focus-within {
+            scrollbar-width: thin;
+          }
+
+          :root.is-embedded body *::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+          }
+
+          :root.is-embedded body *:hover::-webkit-scrollbar,
+          :root.is-embedded body *:focus::-webkit-scrollbar,
+          :root.is-embedded body *:focus-within::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+          }
+
+          :root.is-embedded body *::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.32);
+            border-radius: 9999px;
+          }
+
+          :root.is-embedded body *::-webkit-scrollbar-thumb {
+            background: linear-gradient(
+              180deg,
+              rgba(217, 70, 239, 0.94),
+              rgba(171, 90, 183, 0.88)
+            );
+            border: 1px solid rgba(15, 23, 42, 0.65);
+            border-radius: 9999px;
+          }
+        `;
+        doc.head?.appendChild(style);
+      };
+
+      const resizeFrame = (frame) => {
+        try {
+          const doc = frame.contentDocument;
+          if (!doc) return;
+          ensureEmbeddedStyling(doc);
+          const html = doc.documentElement;
+          const body = doc.body;
+          if (!html || !body) return;
+          const height = Math.max(
+            html.scrollHeight,
+            html.offsetHeight,
+            body.scrollHeight,
+            body.offsetHeight
+          );
+          if (!Number.isFinite(height) || height < 120) return;
+          const rawMaxHeight = frame.getAttribute("data-applet-max-height");
+          const parsedMaxHeight = rawMaxHeight ? Number.parseInt(rawMaxHeight, 10) : NaN;
+          const hasMaxHeight = Number.isFinite(parsedMaxHeight) && parsedMaxHeight >= 120;
+          const targetHeight = hasMaxHeight ? Math.min(height, parsedMaxHeight) : height;
+          frame.style.height = `${Math.ceil(targetHeight)}px`;
+        } catch (err) {
+          // Cross-origin frame; keep CSS fallback height.
+        }
+      };
+
+      frames.forEach((frame) => {
+        const onLoad = () => {
+          resizeFrame(frame);
+          setTimeout(() => resizeFrame(frame), 60);
+          setTimeout(() => resizeFrame(frame), 260);
+          try {
+            const win = frame.contentWindow;
+            if (win) {
+              win.addEventListener("resize", () => resizeFrame(frame));
+            }
+            const doc = frame.contentDocument;
+            if (doc && doc.body && "ResizeObserver" in window) {
+              const observer = new ResizeObserver(() => resizeFrame(frame));
+              observer.observe(doc.body);
+            }
+          } catch (err) {
+            // Ignore sizing hooks when frame internals are inaccessible.
+          }
+        };
+        frame.addEventListener("load", onLoad);
+        if (frame.contentDocument?.readyState === "complete") {
+          onLoad();
+        }
+      });
+    };
+
+    setupAppletFrames();
+
     const anchorSlugCounts = new Map();
     const slugify = (text, prefix = "") => {
       const base = text

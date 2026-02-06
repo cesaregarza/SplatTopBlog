@@ -5,6 +5,39 @@
 {% block og_description %}{{ page.abstract|default:page.search_description }}{% endblock %}
 {% block twitter_description %}{{ page.abstract|default:page.search_description }}{% endblock %}
 {% block og_type %}article{% endblock %}
+{% block extra_head %}
+    {% if page.date %}
+        <meta property="article:published_time" content="{{ page.date|date:'c' }}">
+    {% endif %}
+    {% if page.last_published_at %}
+        <meta property="article:modified_time" content="{{ page.last_published_at|date:'c' }}">
+    {% endif %}
+    {% if page.full_url %}
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "BlogPosting",
+                "headline": "{{ page.seo_title|default:page.title|escapejs }}",
+                "description": "{{ page.abstract|default:page.search_description|default:''|striptags|escapejs }}",
+                "url": "{{ page.full_url|escapejs }}",
+                "author": {
+                    "@type": "Organization",
+                    "name": "SplatTop"
+                },
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "SplatTop Blog"
+                }{% if page.date %},
+                "datePublished": "{{ page.date|date:'c' }}"{% endif %}{% if page.last_published_at %},
+                "dateModified": "{{ page.last_published_at|date:'c' }}"{% endif %}{% if page.social_image %},
+                {% image page.social_image fill-1200x630 as schema_img %}
+                "image": "{{ request.scheme }}://{{ request.get_host }}{{ schema_img.url }}"{% elif page.featured_image %},
+                {% image page.featured_image fill-1200x630 as schema_img %}
+                "image": "{{ request.scheme }}://{{ request.get_host }}{{ schema_img.url }}"{% endif %}
+            }
+        </script>
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="post-layout">

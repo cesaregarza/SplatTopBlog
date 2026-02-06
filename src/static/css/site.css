@@ -1092,6 +1092,15 @@ pre code {
     border-radius: 16px;
     background: transparent;
     box-shadow: none;
+    overflow: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.applet-frame::-webkit-scrollbar,
+.post-content iframe[src^="/static/applets/"]::-webkit-scrollbar {
+    width: 0;
+    height: 0;
 }
 
 .applet-frame.is-framed {

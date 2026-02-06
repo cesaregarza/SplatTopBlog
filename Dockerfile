@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Install uv (pinned instead of :latest for reproducible builds)
+COPY --from=ghcr.io/astral-sh/uv:0.8.17 /uv /usr/local/bin/uv
 
 ###############################
 #    Install Dependencies     #

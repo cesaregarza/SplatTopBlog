@@ -1,7 +1,12 @@
+from django.conf import settings
+from django.contrib.auth.views import redirect_to_login
 from django.http import Http404, HttpResponse
 from django.shortcuts import render
+from django.urls import reverse
+from django.utils.cache import add_never_cache_headers
 from django.utils.html import strip_tags
-from wagtail.models import Site
+from wagtail.forms import PasswordViewRestrictionForm
+from wagtail.models import PageViewRestriction, Site
 
 from .models import BlogPage
 
@@ -43,6 +48,28 @@ def _html_to_text(html):
     return text.strip()
 
 
+def _enforce_view_restrictions(request, page):
+    restrictions = page.get_view_restrictions()
+    for restriction in restrictions:
+        if restriction.accept_request(request):
+            continue
+        if restriction.restriction_type == PageViewRestriction.PASSWORD:
+            form = PasswordViewRestrictionForm(
+                instance=restriction,
+                initial={"return_url": request.get_full_path()},
+            )
+            action_url = reverse("wagtailcore_authenticate_with_password", args=[restriction.id, page.id])
+            response = page.serve_password_required_response(request, form, action_url)
+            add_never_cache_headers(response)
+            return response
+        if restriction.restriction_type in {PageViewRestriction.LOGIN, PageViewRestriction.GROUPS}:
+            login_url = getattr(settings, "WAGTAIL_FRONTEND_LOGIN_URL", reverse("wagtailcore_login"))
+            response = redirect_to_login(request.get_full_path(), login_url)
+            add_never_cache_headers(response)
+            return response
+    return None
+
+
 def _render_block(block):
     block_type = block.block_type
     value = block.value
@@ -71,7 +98,7 @@ def _render_block(block):
         return f"```{language}\n{code}\n```"
 
     if block_type == "raw_html":
-        return str(value).strip()
+        return _html_to_text(str(value))
 
     if block_type == "quote":
         text = str(value).strip()
@@ -107,6 +134,21 @@ def _render_block(block):
         body = _escape_tag_value(_struct_value_get(value, "body", ""))
         return f"[Takeaway; title={title}; color={color}] {body}"
 
+    if block_type == "applet_embed":
+        title = _escape_tag_value(_struct_value_get(value, "title", ""))
+        src = _escape_tag_value(_struct_value_get(value, "src", ""))
+        lazy = "true" if _struct_value_get(value, "lazy_load", True) else "false"
+        raw_max_height = _struct_value_get(value, "max_height", 700)
+        max_height = _escape_tag_value(
+            "" if raw_max_height in ("", None) else str(raw_max_height)
+        )
+        style = _escape_tag_value(_struct_value_get(value, "style_overrides", ""))
+        return (
+            "[Applet; "
+            f"title={title}; src={src}; lazy_load={lazy}; "
+            f"max_height={max_height}; style={style}]"
+        )
+
     if block_type == "collapsible":
         title = _escape_tag_value(_struct_value_get(value, "title", ""))
         category = _struct_value_get(value, "category", "") or "default"
@@ -139,10 +181,7 @@ def blog_page_markdown(request, page_path):
         raise Http404
 
     path_components = [component for component in page_path.split("/") if component]
-    try:
-        route_result = site.root_page.route(request, path_components)
-    except Http404:
-        raise
+    route_result = site.root_page.route(request, path_components)
 
     page = getattr(route_result, "page", None)
     if page is None and isinstance(route_result, tuple):
@@ -154,6 +193,10 @@ def blog_page_markdown(request, page_path):
     specific = page.specific
     if not isinstance(specific, BlogPage):
         raise Http404
+
+    restriction_response = _enforce_view_restrictions(request, specific)
+    if restriction_response is not None:
+        return restriction_response
 
     body = _render_blocks(specific.body)
     title = specific.title or ""

@@ -7,7 +7,16 @@
         <div class="share-preview__label">Share preview</div>
         <div class="share-preview__card">
             <div class="share-preview__media">
-                {% if self.instance.featured_image %}
+                {% if self.instance.social_image %}
+                    {% image self.instance.social_image width-240 as preview_img %}
+                    <img
+                        src="{{ preview_img.url }}"
+                        alt="{{ self.instance.title }}"
+                        width="{{ preview_img.width }}"
+                        height="{{ preview_img.height }}"
+                        class="share-preview__image"
+                    >
+                {% elif self.instance.featured_image %}
                     {% image self.instance.featured_image width-240 as preview_img %}
                     <img
                         src="{{ preview_img.url }}"

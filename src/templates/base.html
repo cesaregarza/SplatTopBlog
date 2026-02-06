@@ -1,28 +1,58 @@
-{% load static wagtailcore_tags wagtailuserbar %}
+{% load static wagtailcore_tags wagtailimages_tags wagtailuserbar %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}{% endblock %} | SplatTop Blog</title>
-    <meta name="description" content="{% block description %}{{ page.search_description }}{% endblock %}">
+    <meta name="description" content="{% block description %}{{ page.search_description|default:'SplatTop blog posts and analysis.' }}{% endblock %}">
+    <meta name="robots" content="{% block robots_meta %}index,follow{% endblock %}">
+    <meta property="og:site_name" content="SplatTop Blog">
     <meta property="og:title" content="{% block og_title %}{% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}{{ page.search_description }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ page.search_description|default:'SplatTop blog posts and analysis.' }}{% endblock %}">
     {% if page and page.full_url %}
         <meta property="og:url" content="{{ page.full_url }}">
     {% endif %}
     <meta property="og:type" content="{% block og_type %}website{% endblock %}">
     <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
     <meta name="twitter:title" content="{% block twitter_title %}{% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}{% endblock %}">
-    <meta name="twitter:description" content="{% block twitter_description %}{{ page.search_description }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{{ page.search_description|default:'SplatTop blog posts and analysis.' }}{% endblock %}">
+    {% block social_image_meta %}
+        {% if page and page.specific.social_image %}
+            {% image page.specific.social_image fill-1200x630 as social_img %}
+            <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ social_img.url }}">
+            <meta property="og:image:width" content="{{ social_img.width }}">
+            <meta property="og:image:height" content="{{ social_img.height }}">
+            <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ social_img.url }}">
+            <meta name="twitter:image:alt" content="{{ page.seo_title|default:page.title }}">
+        {% elif page and page.specific.featured_image %}
+            {% image page.specific.featured_image fill-1200x630 as social_img %}
+            <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ social_img.url }}">
+            <meta property="og:image:width" content="{{ social_img.width }}">
+            <meta property="og:image:height" content="{{ social_img.height }}">
+            <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ social_img.url }}">
+            <meta name="twitter:image:alt" content="{{ page.seo_title|default:page.title }}">
+        {% endif %}
+    {% endblock %}
+
+    {% block canonical_link %}
+        {% if page and page.full_url %}
+            <link rel="canonical" href="{{ page.full_url }}">
+        {% elif request %}
+            <link rel="canonical" href="{{ request.build_absolute_uri }}">
+        {% endif %}
+    {% endblock %}
 
     <link rel="alternate" type="application/rss+xml" title="SplatTop Blog RSS" href="/feed/">
     <link rel="alternate" type="application/atom+xml" title="SplatTop Blog Atom" href="/feed/atom/">
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
     <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css"
+        href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css"
+        integrity="sha384-WcoG4HRXMzYzfCgiyfrySxx90XSl2rxY5mnVY5TwtWE6KLrArNKn0T/mOgNL0Mmi"
+        crossorigin="anonymous"
     >
+    {% block extra_head %}{% endblock %}
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -52,68 +82,17 @@
 
     <script
         defer
-        src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"
+        src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.js"
+        integrity="sha384-J+9dG2KMoiR9hqcFao0IBLwxt6zpcyN68IgwzsCSkbreXUjmNVRhPFTssqdSGjwQ"
+        crossorigin="anonymous"
     ></script>
     <script
         defer
-        src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"
+        src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/contrib/auto-render.min.js"
+        integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh"
+        crossorigin="anonymous"
     ></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            if (!window.renderMathInElement) return;
-
-            const options = {
-                delimiters: [
-                    { left: "[latex]", right: "[/latex]", display: true },
-                    { left: "$$", right: "$$", display: true },
-                    { left: "\\[", right: "\\]", display: true },
-                    { left: "\\(", right: "\\)", display: false },
-                    { left: "$", right: "$", display: false },
-                ],
-                ignoredClasses: ["latex-block"],
-                throwOnError: false,
-            };
-
-            const renderLatexBlocks = (el) => {
-                if (!window.katex) return;
-                const blocks = el.querySelectorAll(".latex-block");
-                blocks.forEach((block) => {
-                    if (block.dataset.katexRendered === "true") return;
-                    const tex = block.textContent.trim();
-                    if (!tex) return;
-                    try {
-                        window.katex.render(tex, block, {
-                            displayMode: true,
-                            throwOnError: false,
-                        });
-                        block.dataset.katexRendered = "true";
-                    } catch (err) {
-                        // Leave raw text if KaTeX fails.
-                    }
-                });
-            };
-
-            const renderTarget = (el) => {
-                renderLatexBlocks(el);
-                window.renderMathInElement(el, options);
-            };
-
-            const containers = document.querySelectorAll(".post-content");
-            const targets = containers.length ? containers : [document.body];
-
-            targets.forEach((el) => {
-                renderTarget(el);
-            });
-
-            const detailsBlocks = document.querySelectorAll(".post-content details");
-            detailsBlocks.forEach((details) => {
-                details.addEventListener("toggle", () => {
-                    if (!details.open) return;
-                    renderTarget(details);
-                });
-            });
-        });
-    </script>
+    <script defer src="{% static 'js/katex-init.js' %}"></script>
     {% block extra_js %}{% endblock %}
     {% wagtailuserbar %}
 </body>

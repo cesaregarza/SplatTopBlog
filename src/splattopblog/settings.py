@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,12 +14,72 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def get_env(primary_key: str, *fallback_keys: str, default: str | None = None) -> str | None:
+    for key in (primary_key, *fallback_keys):
+        value = os.environ.get(key)
+        if value:
+            return value
+    return default
+
+
+def get_env_bool(key: str, default: bool = False) -> bool:
+    value = os.environ.get(key)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def get_env_list(key: str, default: str = "") -> list[str]:
+    raw = os.environ.get(key, default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
 # SECURITY
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production")
-DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
-SERVE_MEDIA = os.environ.get("SERVE_MEDIA", "false").lower() == "true"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")
+DEBUG = get_env_bool("DEBUG", default=False)
+SERVE_MEDIA = get_env_bool("SERVE_MEDIA", default=False)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "local-dev-secret-key-not-for-production"
+    else:
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DEBUG=false.")
+
+if not DEBUG:
+    weak_keys = {
+        "change-me-in-production",
+        "dev-secret-key-change-in-production",
+        "local-dev-secret-key-not-for-production",
+    }
+    if SECRET_KEY in weak_keys:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY is using a known insecure development key while DEBUG=false."
+        )
+
+ALLOWED_HOSTS = get_env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = get_env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:8000")
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = get_env_bool("SECURE_SSL_REDIRECT", default=not DEBUG)
+SESSION_COOKIE_SECURE = get_env_bool("SESSION_COOKIE_SECURE", default=not DEBUG)
+CSRF_COOKIE_SECURE = get_env_bool("CSRF_COOKIE_SECURE", default=not DEBUG)
+CSRF_COOKIE_HTTPONLY = get_env_bool("CSRF_COOKIE_HTTPONLY", default=True)
+SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
+CSRF_COOKIE_SAMESITE = os.environ.get("CSRF_COOKIE_SAMESITE", "Lax")
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = os.environ.get("SECURE_REFERRER_POLICY", "strict-origin-when-cross-origin")
+X_FRAME_OPTIONS = os.environ.get("X_FRAME_OPTIONS", "SAMEORIGIN")
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = get_env_bool(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS",
+    default=not DEBUG,
+)
+SECURE_HSTS_PRELOAD = get_env_bool("SECURE_HSTS_PRELOAD", default=False)
+SECURE_CROSS_ORIGIN_OPENER_POLICY = os.environ.get("SECURE_CROSS_ORIGIN_OPENER_POLICY", "same-origin")
+SECURE_CROSS_ORIGIN_RESOURCE_POLICY = os.environ.get(
+    "SECURE_CROSS_ORIGIN_RESOURCE_POLICY",
+    "same-origin",
+)
 
 # Application definition
 INSTALLED_APPS = [
@@ -58,6 +119,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "blog.middleware.FrontendSecurityHeadersMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -92,14 +154,6 @@ WSGI_APPLICATION = "splattopblog.wsgi.application"
 
 # Database
 # Use PostgreSQL in production, SQLite for local development
-def get_env(primary_key: str, *fallback_keys: str, default: str | None = None) -> str | None:
-    for key in (primary_key, *fallback_keys):
-        value = os.environ.get(key)
-        if value:
-            return value
-    return default
-
-
 def parse_database_url(database_url: str) -> dict:
     parsed = urlparse(database_url)
     scheme = parsed.scheme.split("+", 1)[0]
@@ -244,8 +298,9 @@ WAGTAILSEARCH_BACKENDS = {
 # Wagtail Markdown settings
 WAGTAILMARKDOWN = {
     "autodownload_fontawesome": False,
-    "allowed_tags": [],  # Empty = allow all
-    "allowed_attributes": {},  # Empty = allow all
+    # In wagtail-markdown, empty lists/dicts under default "extend" mode do not mean "allow all".
+    "allowed_tags": [],
+    "allowed_attributes": {},
     "allowed_styles": [],
     "extensions": [
         "extra",

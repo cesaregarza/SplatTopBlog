@@ -1,4 +1,4 @@
-import random
+import hashlib
 import re
 
 from markdown.extensions import Extension
@@ -11,6 +11,15 @@ class RandomChoicePreprocessor(Preprocessor):
     FENCE_RE = re.compile(r"^\s*(```|~~~)")
     LIST_MARKER_RE = re.compile(r"^\s*(?:[-*]|\d+\.)\s+")
     INLINE_RE = re.compile(r"\[random:(.+?)\]", re.IGNORECASE)
+
+    @staticmethod
+    def _pick(options):
+        if not options:
+            return ""
+        seed = "||".join(options).encode("utf-8")
+        digest = hashlib.sha256(seed).digest()
+        index = int.from_bytes(digest[:8], byteorder="big") % len(options)
+        return options[index]
 
     def run(self, lines):
         out = []
@@ -70,7 +79,7 @@ class RandomChoicePreprocessor(Preprocessor):
             parts = [part.strip() for part in options[0].split("|") if part.strip()]
             if parts:
                 options = parts
-        return random.choice(options)
+        return self._pick(options)
 
     def _choose_inline(self, raw):
         if raw is None:
@@ -78,7 +87,7 @@ class RandomChoicePreprocessor(Preprocessor):
         parts = [part.strip() for part in raw.split("|") if part.strip()]
         if not parts:
             return ""
-        return random.choice(parts)
+        return self._pick(parts)
 
 
 class RandomChoiceExtension(Extension):
