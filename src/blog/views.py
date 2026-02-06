@@ -1,8 +1,17 @@
 from django.http import Http404, HttpResponse
+from django.shortcuts import render
 from django.utils.html import strip_tags
 from wagtail.models import Site
 
 from .models import BlogPage
+
+
+def custom_404(request, exception):
+    return render(request, "404.html", status=404)
+
+
+def custom_500(request):
+    return render(request, "500.html", status=500)
 
 
 def _escape_tag_value(value):
