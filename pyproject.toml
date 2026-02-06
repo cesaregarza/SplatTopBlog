@@ -32,6 +32,8 @@ dependencies = [
 dev-dependencies = [
     "django-debug-toolbar>=4.0",
     "ipython>=8.0",
+    "pytest>=8.0",
+    "pytest-django>=4.8",
     "ruff>=0.6.4",
 ]
 
