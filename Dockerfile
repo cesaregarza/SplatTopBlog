@@ -42,6 +42,7 @@ FROM dependencies AS build
 # Build arguments for versioning
 ARG BUILD_VERSION=dev
 ARG GIT_SHA=unknown
+ARG BUILD_DJANGO_SECRET_KEY=build-time-only-secret-not-used-at-runtime
 
 # Set version info as environment variables
 ENV APP_VERSION=${BUILD_VERSION} \
@@ -53,7 +54,8 @@ COPY src/ ./src/
 WORKDIR /app/src
 
 # Collect static files
-RUN uv run python manage.py collectstatic --noinput --clear
+RUN DJANGO_SECRET_KEY="${BUILD_DJANGO_SECRET_KEY}" \
+    uv run python manage.py collectstatic --noinput --clear
 
 # Create non-root user
 RUN useradd -m -u 1000 wagtail && chown -R wagtail:wagtail /app
