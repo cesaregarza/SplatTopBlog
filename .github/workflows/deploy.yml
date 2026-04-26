@@ -52,7 +52,7 @@ jobs:
         with:
           broker-url: https://credentials.garz.ai
           audience: https://credentials.garz.ai/v1
-          bundle: splattop-blog-deploy
+          capability: digitalocean-k8s-deploy
 
       - name: Log in to DigitalOcean Container Registry
         uses: docker/login-action@v3
@@ -157,7 +157,7 @@ jobs:
         with:
           broker-url: https://credentials.garz.ai
           audience: https://credentials.garz.ai/v1
-          bundle: splattop-blog-deploy
+          capability: config-repo-write
 
       - name: Checkout config repository
         uses: actions/checkout@v4
